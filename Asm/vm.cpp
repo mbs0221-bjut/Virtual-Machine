@@ -11,9 +11,21 @@ void CPU::load(FILE *fp){
 	fread(&LENGTH, sizeof(WORD), 1, fp);
 	fread(&RAM, sizeof(BYTE)* LENGTH, 1, fp);
 	printf("DS:%04d,CS:%04d,LENGTH:%04d\n", DS, CS, LENGTH);
+	printf("START\t[CYCLE:%04d DS:%04d CS:%04d IP:%04x]", CYCLE, DS, CS, IP);
+	printf("[%4d", RAM[DS]);
+	for (int i = DS + 1; i < CS; i++){
+		printf(" %4d", RAM[i]);
+	}
+	printf("]\n");
 	IP = CS;
 }
 void CPU::store(){
+	printf("END\t[CYCLE:%04d DS:%04d CS:%04d IP:%04x]", CYCLE, DS, CS, IP);
+	printf("[%4d", RAM[DS]);
+	for (int i = DS + 1; i < CS; i++){
+		printf(" %4d", RAM[i]);
+	}
+	printf("]\n");
 }
 void CPU::execute(){
 	WORD ABUS, DBUS;
@@ -170,7 +182,6 @@ void CPU::execute(){
 			}
 			break;
 		case HALT:
-			printf("halt\n");
 			break;
 		default:
 			printf("invalid OP=%d at IP=%04x\n", OP, IP);
@@ -184,10 +195,10 @@ void CPU::trace(){
 	char c;
 	cin >> c;
 	printf("[CYCLE:%04d DS:%04d CS:%04d IP:%04x]", CYCLE, DS, CS, IP);
-#endif
 	printf("[%4d", RAM[DS]);
 	for (int i = DS + 1; i < CS; i++){
 		printf(" %4d", RAM[i]);
 	}
 	printf("]\n");
+#endif
 }
