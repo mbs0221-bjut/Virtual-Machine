@@ -5,9 +5,11 @@ void main(){
 	FILE file;
 	FILE *fp = &file;
 	// 汇编生成目标代码
-	printf("生成目标代码\n");
-	Asm Asm("data.asm");
+	Asm Asm("data.s");
+	printf("语法分析开始\n");
 	Asm.parse();
+	printf("语法分析结束\n");
+	printf("汇编开始\n");
 	printf("line  width offset\n");
 	fopen_s(&fp, "data.bin", "w");
 	Asm.write(fp);

@@ -99,8 +99,11 @@ public:
 		// 停机指令
 		words["halt"] = new Word(HALT, "halt");
 		// 算术逻辑运算
-		words["sub"] = new Word(SUB, "jg");
-		words["add"] = new Word(ADD, "jg");
+		words["sub"] = new Word(SUB, "add");
+		words["add"] = new Word(ADD, "sub");
+		// 栈操作指令
+		words["push"] = new Word(PUSH, "push");
+		words["pop"] = new Word(POP, "pop");
 		// 跳转指令
 		words["jmp"] = new Word(JMP, "jmp");
 		words["jb"] = new Word(JB, "jb");
@@ -110,6 +113,8 @@ public:
 		words["jg"] = new Word(JG, "jg");
 		words["jne"] = new Word(JNE, "jne");
 		// 函数调用
+		words["proc"] = new Word(PROC, "proc");
+		words["endp"] = new Word(ENDP, "endp");
 		words["call"] = new Word(CALL, "call");
 		// 段寄存器
 		words["ds"] = new Integer(NUM, REG::DS);
@@ -134,9 +139,16 @@ public:
 		char ch;
 		do{
 			inf.read(&ch, sizeof(ch));
+			if (ch == ';'){
+				while (ch != '\n'){
+					//printf("skip:%c\n", ch);
+					inf.read(&ch, sizeof(ch));
+				}
+			}
 			if (ch == '\n')line++;
 		} while (ch == ' ' || ch == '\n' || ch == '\t');
-		if (ch == EOF){
+		if (inf.eof()){
+			printf("end of file\n");
 			return new Token(END);
 		}
 		if (isalpha(ch)){

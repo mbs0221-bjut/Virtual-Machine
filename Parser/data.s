@@ -1,6 +1,21 @@
 .data 12
 .stack 1000
 .code
+proc play:
+	sub $sp 0
+	load $0 &0
+	load $7 1
+	- $0 $7 $8
+	store $8 &0;a
+	load $1 &2
+	load $9 1
+	- $1 $9 $10
+	store $10 &2;b
+	load $2 &4
+	load $11 1
+	- $2 $11 $12
+	store $12 &4;c
+endp
 proc draw:
 	;x @2
 	;y @4
@@ -8,36 +23,41 @@ proc draw:
 	;b1 @2
 	;c1 @4
 	;d1 @6
-	;e1 @8
-	;f1 @10
-	- $sp 12
-	load $7 @2
-	store $7 @0;a1
-	load $8 @4
-	store $8 @2;b1
-	load $9 @0
-	store $9 @4;c1
-	load $10 @2
-	store $10 @6;d1
-	load $11 @4
-	store $11 @8;e1
-	load $12 @6
-	store $12 @10;f1
+	sub $sp 8
+	load $14 @0
+	store $14 @0;a1
+	load $15 @2
+	store $15 @2;b1
+	load $16 @0
+	store $16 @4;c1
+	load $17 @2
+	store $17 @6;d1
+	load $18 @4
+	store $18 @0;e1
+	load $19 @6
+	store $19 @0;f1
+	push $bp
+	load $bp $sp
+	sub $sp 2
+	call play
+	add $sp 2
+	load $sp $bp
+	pop $bp
 endp
 proc main:
 	;a @0
-	- $sp 2
-	load $18 10
-	load $19 11
+	sub $sp 2
+	load $26 10
+	load $27 11
 	push $bp
 	load $bp $sp
-	push $19
-	push $18
-	- $sp 2
+	push $27
+	push $26
+	sub $sp 2
 	call draw
-	+ $sp 2
-	pop $18
-	pop $19
+	add $sp 2
+	pop $26
+	pop $27
 	load $sp $bp
 	pop $bp
 endp

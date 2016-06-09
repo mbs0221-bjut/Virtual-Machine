@@ -137,7 +137,7 @@ struct Decl :Stmt{
 	list<Id*> ids;
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
-		//printf("\ndata\n");
+		printf("data\n");
 		//fprintf(fp, "\tdata\n");
 		//list<Id*>::iterator iter;
 		//for (iter = ids.begin(); iter != ids.end(); iter++){
@@ -283,7 +283,7 @@ struct Case :Stmt{
 		E->code(fp);
 		for (iter = Ss.begin(); iter != Ss.end(); iter++){
 			fprintf(fp, "L%d:\n", iter->second->begin);
-			fprintf(fp, "= $%d $%d #%d", E->label, iter->first);
+			fprintf(fp, "= $%d $%d #%d\n", E->label, iter->first);
 			iter->second->code(fp);
 		}
 	}
@@ -365,9 +365,8 @@ struct Function : Word{
 				width += (*iter)->t->width;
 			}
 		}
-		fprintf(fp, "\t- $sp %d\n", width);
+		fprintf(fp, "\tsub $sp %d\n", width);
 		width = 0;
-		Symbols *table = symbols;
 		for (table = params; table != nullptr; table = table->next){
 			for (iter = table->ids.begin(); iter != table->ids.end(); iter++){
 				(*iter)->offset = width;
@@ -401,11 +400,11 @@ struct Call :Expr{
 			fprintf(fp, "\tpush $%d\n", (*iter)->label);
 		}
 		// 预留返回值空间
-		fprintf(fp, "\t- $sp %d\n", func->type->width);
+		fprintf(fp, "\tsub $sp %d\n", func->type->width);
 		// 调用函数
 		fprintf(fp, "\tcall %s\n", func->word.c_str());
 		// 释放返回值空间
-		fprintf(fp, "\t+ $sp %d\n", func->type->width);
+		fprintf(fp, "\tadd $sp %d\n", func->type->width);
 		// 参数出栈
 		reverse(args.begin(), args.end());
 		for (iter = args.begin(); iter != args.end(); iter++){

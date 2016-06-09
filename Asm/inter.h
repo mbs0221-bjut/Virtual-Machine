@@ -51,7 +51,7 @@ struct Call :Code{
 	Func *func;
 	virtual void code(FILE* fp){
 		Code::code(fp);
-		printf("call\t %s\n", func->name.c_str());
+		printf("call\t$%04x;%s\n", func->offset, func->name.c_str());
 		fwrite(&opt, sizeof(BYTE), 1, fp);
 	}
 };
@@ -77,6 +77,26 @@ struct Store :Code{
 		fwrite(&opt, sizeof(BYTE), 1, fp);
 		fwrite(&reg, sizeof(BYTE), 1, fp);
 		fwrite(&addr, sizeof(WORD), 1, fp);
+	}
+};
+
+struct Push :Code{
+	BYTE reg;
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("push\t$%02x $%02x\n", opt, reg);
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+		fwrite(&reg, sizeof(BYTE), 1, fp);
+	}
+};// Ö±½ÓÑ°Ö·
+
+struct Pop :Code{
+	BYTE reg;
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("pop\t$%02x $%02x\n", opt, reg);
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+		fwrite(&reg, sizeof(BYTE), 1, fp);
 	}
 };
 

@@ -17,6 +17,6 @@ enum Tag{
 	ID = 256, NUM, END, LABEL, DATA, STACK, CODE, PROC, ENDP, CALL
 };
 
-enum REG{ BP = 256, SI, DI, CS, DS, ES, SS, SP };
+enum REG{ BP, SI, DI, CS, DS, ES, SS, SP };
 
 #endif

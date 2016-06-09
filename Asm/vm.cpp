@@ -8,6 +8,7 @@ void CPU::init(){
 void CPU::load(FILE *fp){
 	fread(&DS, sizeof(WORD), 1, fp);
 	fread(&CS, sizeof(WORD), 1, fp);
+	fread(&SS, sizeof(WORD), 1, fp);
 	fread(&LENGTH, sizeof(WORD), 1, fp);
 	fread(&RAM, sizeof(BYTE)* LENGTH, 1, fp);
 	printf("DS:%04d,CS:%04d,LENGTH:%04d\n", DS, CS, LENGTH);
