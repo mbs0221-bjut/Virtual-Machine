@@ -1,7 +1,8 @@
-int a,b;
+int a,b,c;
 
 a = 0;
 b = 24;
+c = 48;
 
 for(a = 10;a > 0;a = a - 1){
 	b = b + 1;
@@ -13,10 +14,12 @@ while(a < 10){
 
 do{
 	b = b - 1;
+	c = c + 1;
 }while(b > 12);
 
 if(b ! a){
-	a = 64;
-	b = 32;	
+	a = a + 64;
+	b = b + 32;	
+	c = c + 16;
 }
 #
