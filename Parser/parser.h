@@ -11,7 +11,7 @@ private:
 	Lexer *lexer;
 	// 符号表
 	Symbols *symbols;// 局部符号表
-	Global *globol;
+	Global *globol;// 全局符号表
 	// 匹配词法单元
 	bool match(int kind){
 		if (s->kind == kind){
@@ -71,8 +71,8 @@ private:
 		Function *f = new Function(name, type);
 		symbols->ids.push_back(new Id(type, f));
 		// 符号表入栈
-		f->symbols->prev = symbols;
-		symbols = f->symbols;
+		f->params->prev = symbols;
+		symbols = f->params;
 		match('(');
 		int offset = 0;
 		if (s->kind == BASIC){
@@ -88,8 +88,11 @@ private:
 			}
 		}
 		match(')');
+		f->symbols->prev = symbols;
+		symbols = f->symbols;
 		f->body = stmts();
 		// 符号表出栈
+		symbols = symbols->prev;
 		symbols = symbols->prev;
 		return f;
 	}
@@ -126,6 +129,7 @@ private:
 		Stmts *sts = new Stmts;
 		// 符号表入栈
 		Symbols *table = new Symbols;
+		symbols->next = table;
 		table->prev = symbols;
 		symbols = table;
 		// 语法分析

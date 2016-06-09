@@ -1,27 +1,22 @@
 int a,b,c,d,e,f;
-char num;
 
-
-int draw(int x, int y, int z){
-	if(x < 10){
-		a = a - 10;
-	}
-}
-
-int play(int x, int y, int z){
-	int p;
-	p = x + y + z;
-}
-
-int main(int a, int b){
-	int w;
-	for(a = 10;a > 0;a = a - 1){
-		b = b + 034;
-		if(b = 30){
-			continue;
+int draw(int x, int y){
+	int a1,b1;
+	a1 = x;
+	b1 = y;
+	{
+		int c1,d1;
+		c1 = a1;
+		d1 = b1;
+		{
+			int e1,f1;
+			e1 = c1;
+			f1 = d1;
 		}
-		b = b - 1;
 	}
-	draw(10, 11, 12);
-	play(10, 11, 12);
+}
+
+int main(){
+	int a;
+	draw(10, 11);
 }

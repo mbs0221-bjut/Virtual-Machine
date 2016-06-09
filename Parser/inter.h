@@ -90,7 +90,6 @@ struct Arith :Expr{
 	Arith(char opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
 	virtual void code(FILE *fp){
 		Expr::code(fp);
-
 		E1->code(fp);
 		E2->code(fp);
 		fprintf(fp, "\t%c $%d $%d $%d\n", opt, E1->label, E2->label, label);
@@ -117,9 +116,9 @@ struct Id :Expr{
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		if (global){
-			fprintf(fp, "\tload $%d #ds + %d;%s\n", label, offset, s->word.c_str());
+			fprintf(fp, "\tload $%d &%d\n", label, offset);
 		}else{
-			fprintf(fp, "\tload $%d #sp + %d;%s\n", label, offset, s->word.c_str());
+			fprintf(fp, "\tload $%d @%d\n", label, offset);
 		}
 	}
 };
@@ -157,7 +156,11 @@ struct Assign :Stmt{
 		Stmt::code(fp);
 		printf("assign\n");
 		E2->code(fp);
-		fprintf(fp, "\tstore $%d %s\n", E2->label, E1->s->word.c_str());
+		if (E1->global){
+			fprintf(fp, "\tstore $%d &%d;%s\n", E2->label, E1->offset, E1->s->word.c_str());
+		}else{
+			fprintf(fp, "\tstore $%d @%d;%s\n", E2->label, E1->offset, E1->s->word.c_str());
+		}
 	}
 };
 
@@ -218,7 +221,6 @@ struct While :Stmt{
 		fprintf(fp, "L%d:\n", next);
 	}
 };
-
 
 struct Do :Stmt{
 	Cond *C;
@@ -321,11 +323,12 @@ struct Symbols{
 	int id;
 	static int count;
 	list<Id*> ids;
-	Symbols *prev;
+	Symbols *prev, *next;
 	Symbols(){
 		id = count++;
 		ids.clear();
 		prev = nullptr;
+		next = nullptr;
 	}
 };
 
@@ -333,27 +336,46 @@ int Symbols::count = 0;
 
 struct Function : Word{
 	Type *type;
+	Symbols *params;
 	Symbols *symbols;
 	Stmt* body;
 	Function(string name, Type *type) :Word(FUNCTION, name), type(type){
 		kind = FUNCTION;
+		params = new Symbols;
 		symbols = new Symbols;
 	}
 	virtual void code(FILE *fp){
-		int width = 0;
+		fprintf(fp, "proc %s:\n", word.c_str());
 		list<Id*>::iterator iter;
-		for (iter = symbols->ids.begin(); iter != symbols->ids.end(); iter++){
-			width += (*iter)->t->width;
+		int width = type->width;
+		//reverse(params->ids.begin(), params->ids.end());
+		for (iter = params->ids.begin(); iter != params->ids.end(); iter++){
 			(*iter)->offset = width;
 			(*iter)->global = false;
+			fprintf(fp, "\t;%s @%d\n", (*iter)->s->word.c_str(), width);
+			width += (*iter)->t->width;
 		}
-		fprintf(fp, "proc %s:\n", word.c_str());
-		fprintf(fp, "\tpush bp\n");
-		fprintf(fp, "\tmov bp sp\n");
-		fprintf(fp, "\tsub sp %d\n", width);// 为参数和局部变量预留空间
-		fprintf(fp, "\tsub sp %d\n", type->width);// 为返回值预留空间
+		width = 0;
+		Symbols *table = symbols;
+		for (table = symbols; table != nullptr; table = table->next){
+			for (iter = table->ids.begin(); iter != table->ids.end(); iter++){
+				(*iter)->offset = width;
+				(*iter)->global = false;
+				fprintf(fp, "\t;%s @%d\n", (*iter)->s->word.c_str(), width);
+				width += (*iter)->t->width;
+			}
+		}
+		fprintf(fp, "\t- $sp %d\n", width);
+		width = 0;
+		Symbols *table = symbols;
+		for (table = params; table != nullptr; table = table->next){
+			for (iter = table->ids.begin(); iter != table->ids.end(); iter++){
+				(*iter)->offset = width;
+				(*iter)->global = false;
+				width += (*iter)->t->width;
+			}
+		}
 		body->code(fp);
-		fprintf(fp, "\tret\n");
 		fprintf(fp, "endp\n");
 	}
 };
@@ -365,25 +387,33 @@ struct Call :Expr{
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("call\n");
-		fprintf(fp, "\tpush bp\n");
-		fprintf(fp, "\tmov bp sp\n");
-		// 传递参数
+		// 计算参数
 		list<Expr*>::iterator iter;
 		for (iter = args.begin(); iter != args.end(); iter++){
 			(*iter)->code(fp);
 		}
-		// 传递参数入栈
+		// 入栈
+		fprintf(fp, "\tpush $bp\n");
+		fprintf(fp, "\tload $bp $sp\n");
+		// 参数入栈
 		reverse(args.begin(), args.end());
 		for (iter = args.begin(); iter != args.end(); iter++){
 			fprintf(fp, "\tpush $%d\n", (*iter)->label);
 		}
-		// 跳转到函数体处开始执行
+		// 预留返回值空间
+		fprintf(fp, "\t- $sp %d\n", func->type->width);
+		// 调用函数
 		fprintf(fp, "\tcall %s\n", func->word.c_str());
-		// 返回参数出栈
+		// 释放返回值空间
+		fprintf(fp, "\t+ $sp %d\n", func->type->width);
+		// 参数出栈
 		reverse(args.begin(), args.end());
 		for (iter = args.begin(); iter != args.end(); iter++){
 			fprintf(fp, "\tpop $%d\n", (*iter)->label);
 		}
+		// 出栈
+		fprintf(fp, "\tload $sp $bp\n");
+		fprintf(fp, "\tpop $bp\n");
 	}
 };
 
@@ -393,18 +423,18 @@ struct Global :Node{
 	virtual void code(FILE *fp){
 		Node::code(fp);
 		if (!ids.empty()){
-			fprintf(fp, "data\n");
 			int width = 0;
 			list<Id*>::iterator iter;
 			for (iter = ids.begin(); iter != ids.end(); iter++){
-				fprintf(fp, "\t\t$%s [%d]\n", (*iter)->s->word.c_str(), (*iter)->t->width);
-				width += (*iter)->t->width;
 				(*iter)->offset = width;
 				(*iter)->global = true;
+				width += (*iter)->t->width;
 			}
-			fprintf(fp, "data\n");
+			fprintf(fp, ".data %d\n", width);
+			fprintf(fp, ".stack 1000\n");
 		}
 		if (!funcs.empty()){
+			fprintf(fp, ".code\n");
 			list<Function*>::iterator iter2;
 			for (iter2 = funcs.begin(); iter2 != funcs.end(); iter2++){
 				(*iter2)->code(fp);

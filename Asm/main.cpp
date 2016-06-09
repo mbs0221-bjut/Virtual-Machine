@@ -15,13 +15,13 @@ void main(){
 	printf("»ã±à½áÊø\n");
 	// ÐéÄâ»úÖ´ÐÐ
 	printf("ÐéÄâ»úÖ´ÐÐ\n");
-	CPU CPU;
-	CPU.init();
-	fopen_s(&fp, "data.bin", "r");
-	CPU.load(fp);
-	fclose(fp);
-	CPU.execute();
-	CPU.store();
+	//CPU CPU;
+	//CPU.init();
+	//fopen_s(&fp, "data.bin", "r");
+	//CPU.load(fp);
+	//fclose(fp);
+	//CPU.execute();
+	//CPU.store();
 	printf("Ö´ÐÐ½áÊø\n");
 	cin >> a;
 }

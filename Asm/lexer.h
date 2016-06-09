@@ -91,6 +91,7 @@ public:
 	int line = 1;
 	Lexer(string fp){
 		words["data"] = new Word(DATA, "data");
+		words["stack"] = new Word(STACK, "stack");
 		words["code"] = new Word(CODE, "code");
 		// 数据操作
 		words["load"] = new Word(LOAD, "load");
@@ -111,10 +112,10 @@ public:
 		// 函数调用
 		words["call"] = new Word(CALL, "call");
 		// 段寄存器
-		words["bp"] = new Integer(NUM, REG::DS);
-		words["sp"] = new Integer(NUM, REG::CS);
-		words["bp"] = new Integer(NUM, REG::SS);
-		words["sp"] = new Integer(NUM, REG::ES);
+		words["ds"] = new Integer(NUM, REG::DS);
+		words["cs"] = new Integer(NUM, REG::CS);
+		words["ss"] = new Integer(NUM, REG::SS);
+		words["es"] = new Integer(NUM, REG::ES);
 		// 寄存器
 		words["bp"] = new Integer(NUM, REG::BP);
 		words["sp"] = new Integer(NUM, REG::SP);

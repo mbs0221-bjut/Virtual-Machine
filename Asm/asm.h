@@ -26,75 +26,45 @@ private:
 		s = lexer->scan();
 		return false;
 	}
-	Code* data(){
-		Data *d = new Data;
-		d->opt = NULL;
-		d->line = lexer->line;
+	void data(){
+		match('.');
 		match(DATA);
-		d->width = ((Integer*)s)->value;
 		DS = 0;
-		CS = d->width;
-		match(NUM);
-		match(DATA);
-		return d;
+		cs->offset += ((Integer*)s)->value;
 	}
-	Code* store(){
-		Store *l = new Store;
-		l->line = lexer->line;
-		l->opt = STORE;
-		match(STORE);
-		match('$');
-		l->reg = ((Integer*)s)->value;
-		match(NUM);
-		switch (s->kind){
-		case '#':l->opt |= MR_A; match('#'); break;
-		case '*':l->opt |= MR_B; match('*'); break;
-		case ID:l->opt |= MR_B; match(ID); break;
-		default:break;
+	void stack(){
+		match('.');
+		match(STACK);
+		cs->offset += ((Integer*)s)->value;
+	}
+	void code(){
+		SS = cs->offset;
+		CS = cs->offset;
+		match('.');
+		match(CODE);
+		cs = new Codes;
+		s = lexer->scan();
+		Code *c = new Code;
+		while (s->kind == PROC){
+			c = proc();
+			if (c){ 
+				cs->codes.push_back(c);
+				cs->offset = cs->width; 
+				cs->width += c->width;
+			}
 		}
-		l->addr = ((Integer*)s)->value;
-		l->width = 4;
-		match(NUM);
-		return l;
-	}
-	Code* halt(){
-		Halt *h = new Halt;
-		h->line = lexer->line;
-		h->opt = HALT;
-		h->width = 1;
-		match(HALT);
-		return h;
-	}
-	Code* load(){
-		Load *l = new Load;
-		l->line = lexer->line;
-		l->opt = LOAD;
-		match(LOAD);
-		match('$');
-		l->reg = ((Integer*)s)->value;
-		match(NUM);
-		switch (s->kind){
-		case '#':l->opt |= MR_A; match('#'); break;
-		case '*':l->opt |= MR_B; match('*'); break;
-		case ID:l->opt |= MR_B; match(ID); break;
-		default:break;
-		}
-		l->addr = ((Integer*)s)->value;
-		match(NUM);
-		l->width = 4;
-		return l;
 	}
 	Code* proc(){
 		Func *f = new Func;
 		match(PROC);
 		f->name = ((Word*)s)->word;
 		match(ID);
+		match(':');
 		funcs[f->name] = f;
 		Code *c = new Code;
-		while (s->kind != END){
+		while (s->kind != ENDP){
 			switch (s->kind){
 			case ID:c = label(); break;
-			case DATA:c = data(); break;
 			case CALL: c = call(); break;
 			case LOAD:c = load(); break;
 			case STORE:c = store(); break;
@@ -118,8 +88,7 @@ private:
 			}
 			if (c){ f->codes.push_back(c); c->offset = f->width; f->width += c->width; }
 		}
-		match(END);
-		match(PROC);
+		match(ENDP);
 		return f;
 	}
 	Code* call(){
@@ -133,6 +102,47 @@ private:
 		c->func = funcs[((Word*)s)->word];
 		match(ID);
 		return c;
+	}
+	Code* store(){
+		Store *l = new Store;
+		l->line = lexer->line;
+		l->opt = STORE;
+		match(STORE);
+		match('$');
+		l->reg = ((Integer*)s)->value;
+		match(NUM);
+		switch (s->kind){
+		case '#':l->opt |= MR_A; match('#'); break;// 立即数寻址
+		case '@':l->opt |= MR_B; match('*'); break;// BP间接寻址
+		case '&':l->opt |= MR_B; match('*'); break;// DS间接寻址
+		case ID:l->opt |= MR_B; match(ID); break;
+		default:break;
+		}
+		l->addr = ((Integer*)s)->value;
+		l->width = 4;
+		match(NUM);
+		return l;
+	}
+	Code* load(){
+		Load *l = new Load;
+		l->line = lexer->line;
+		l->opt = LOAD;
+		match(LOAD);
+		match('$');
+		l->reg = ((Integer*)s)->value;
+		match(NUM);
+		switch (s->kind){
+		case '#':l->opt |= MR_A; match('#'); break;
+		case '*':l->opt |= MR_B; match('*'); break;
+		case '$':l->opt |= MR_B; match('$'); break;
+		case NUM:l->opt |= MR_A; match(NUM); break;
+		case ID:l->opt |= MR_B; match(ID); break;
+		default:break;
+		}
+		l->addr = ((Integer*)s)->value;
+		match(NUM);
+		l->width = 4;
+		return l;
 	}
 	Code* label(){
 		if (lables.find(((Word*)s)->word) == lables.end()){
@@ -192,29 +202,30 @@ private:
 		j->width = 3;
 		return j;
 	}
+	Code* halt(){
+		Halt *h = new Halt;
+		h->line = lexer->line;
+		h->opt = HALT;
+		h->width = 1;
+		match(HALT);
+		return h;
+	}
 public:
 	int DS = 0;
 	int CS = 0;
+	int SS = 0;
 	Asm(string fp){
 		lexer = new Lexer(fp);
 	}
 	void parse(){
-		Code *c = new Code;
-		cs = new Codes;
-		s = lexer->scan();
-		Code *c = new Code;
-		while (s->kind != END){
-			switch (s->kind){
-			case DATA:c = data(); break;
-			case PROC:c = proc(); break;
-			default:printf("[%3d]find unsupport cmd '%d'\n", lexer->line, s->kind); break;
-			}
-			if (c){ cs->codes.push_back(c); cs->offset = cs->width; cs->width += c->width; }
-		}
+		data();
+		stack();
+		code();
 	}
 	void write(FILE *fp){
 		fwrite(&DS, sizeof(WORD), 1, fp);
 		fwrite(&CS, sizeof(WORD), 1, fp);
+		fwrite(&SS, sizeof(WORD), 1, fp);
 		fwrite(&cs->width, sizeof(WORD), 1, fp);
 		cs->code(fp);
 	}
