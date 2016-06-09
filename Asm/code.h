@@ -4,7 +4,6 @@
 typedef unsigned char BYTE;
 typedef unsigned short int WORD;
 
-//宏定义种别码
 enum Tag{
 	HALT,
 	ADD, SUB, MUL, DIV, MOD, CMP,// integer operator
@@ -18,14 +17,6 @@ enum Tag{
 	ID = 256, NUM, END, LABEL, DATA, STACK, CODE, PROC, ENDP, CALL
 };
 
-enum REG{
-	BP = 256,
-	SI,
-	DI,
-	CS,
-	DS,
-	ES,
-	SS,
-	SP
-};// 通用寄存器
+enum REG{ BP = 256, SI, DI, CS, DS, ES, SS, SP };
+
 #endif
