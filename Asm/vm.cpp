@@ -181,6 +181,10 @@ void CPU::execute(){
 				RAM[ABUS + 1] = DBUS >> 8;
 			}
 			break;
+		case IN:
+			break;
+		case OUT:
+			break;
 		case HALT:
 			break;
 		default:

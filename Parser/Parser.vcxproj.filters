@@ -36,7 +36,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="data.asm">
+    <None Include="data.s">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

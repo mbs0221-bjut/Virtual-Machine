@@ -17,6 +17,7 @@ private:
 	Lexer *lexer;
 	Codes *cs;
 	map<string, Label*> lables;
+	map<string, Func*> funcs;
 	bool match(int kind){
 		if (s->kind == kind){
 			s = lexer->scan();
@@ -33,7 +34,7 @@ private:
 		d->width = ((Integer*)s)->value;
 		DS = 0;
 		CS = d->width;
-		match(INT);
+		match(NUM);
 		match(DATA);
 		return d;
 	}
@@ -44,15 +45,16 @@ private:
 		match(STORE);
 		match('$');
 		l->reg = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		switch (s->kind){
 		case '#':l->opt |= MR_A; match('#'); break;
 		case '*':l->opt |= MR_B; match('*'); break;
+		case ID:l->opt |= MR_B; match(ID); break;
 		default:break;
 		}
 		l->addr = ((Integer*)s)->value;
 		l->width = 4;
-		match(INT);
+		match(NUM);
 		return l;
 	}
 	Code* halt(){
@@ -70,23 +72,72 @@ private:
 		match(LOAD);
 		match('$');
 		l->reg = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		switch (s->kind){
 		case '#':l->opt |= MR_A; match('#'); break;
 		case '*':l->opt |= MR_B; match('*'); break;
+		case ID:l->opt |= MR_B; match(ID); break;
 		default:break;
 		}
 		l->addr = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		l->width = 4;
 		return l;
 	}
+	Code* proc(){
+		Func *f = new Func;
+		match(PROC);
+		f->name = ((Word*)s)->word;
+		match(ID);
+		funcs[f->name] = f;
+		Code *c = new Code;
+		while (s->kind != END){
+			switch (s->kind){
+			case ID:c = label(); break;
+			case DATA:c = data(); break;
+			case CALL: c = call(); break;
+			case LOAD:c = load(); break;
+			case STORE:c = store(); break;
+			case HALT:c = halt(); break;
+			case JE: c = jmp(JE); break;
+			case JNE: c = jmp(JNE); break;
+			case JB: c = jmp(JB); break;
+			case JG: c = jmp(JG); break;
+			case JMP: c = jmp(JMP); break;
+			case '~':c = unary(); break;
+			case '+':c = arith(ADD); break;
+			case '-':c = arith(SUB); break;
+			case '*':c = arith(MUL); break;
+			case '/':c = arith(DIV); break;
+			case '%':c = arith(MOD); break;
+			case '<':c = arith(CMP); break;
+			case '>':c = arith(CMP); break;
+			case '=':c = arith(CMP); break;
+			case '!':c = arith(CMP); break;
+			default:printf("[%3d]find unsupport cmd '%d'\n", lexer->line, s->kind); break;
+			}
+			if (c){ f->codes.push_back(c); c->offset = f->width; f->width += c->width; }
+		}
+		match(END);
+		match(PROC);
+		return f;
+	}
+	Code* call(){
+		Call *c = new Call;
+		match(CALL);
+		if (funcs.find(((Word*)s)->word) == funcs.end()){
+			printf("[%3d]find unsupport cmd '%d'\n", lexer->line, s->kind);
+			match(ID);
+			return c;
+		}
+		c->func = funcs[((Word*)s)->word];
+		match(ID);
+		return c;
+	}
 	Code* label(){
-		match(LABEL);
 		if (lables.find(((Word*)s)->word) == lables.end()){
 			lables[((Word*)s)->word] = new Label((Word*)s, cs->width);
-		}
-		else{
+		}else{
 			lables[((Word*)s)->word]->offset = cs->width;
 		}
 		match(ID);
@@ -100,10 +151,10 @@ private:
 		u->opt = NEG;
 		match('$');
 		u->reg1 = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		match('$');
 		u->reg2 = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		u->width = 3;
 		return u;
 	}
@@ -114,13 +165,13 @@ private:
 		match(s->kind);
 		match('$');
 		a->reg1 = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		match('$');
 		a->reg2 = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		match('$');
 		a->reg3 = ((Integer*)s)->value;
-		match(INT);
+		match(NUM);
 		a->width = 4;
 		return a;
 	}
@@ -151,32 +202,14 @@ public:
 		Code *c = new Code;
 		cs = new Codes;
 		s = lexer->scan();
-		while (s->kind != '#'){
+		Code *c = new Code;
+		while (s->kind != END){
 			switch (s->kind){
-			case ID:printf("[%3d]find id:%s\n", lexer->line, ((Word*)s)->word.c_str()); break;
 			case DATA:c = data(); break;
-			case LOAD:c = load(); break;
-			case STORE:c = store(); break;
-			case HALT:c = halt(); break;
-			case LABEL:c = label(); break;
-			case JE: c = jmp(JE); break;
-			case JNE: c = jmp(JNE); break;
-			case JB: c = jmp(JB); break;
-			case JG: c = jmp(JG); break;
-			case JMP: c = jmp(JMP); break;
-			case '~':c = unary(); break;
-			case '+':c = arith(ADD); break;
-			case '-':c = arith(SUB); break;
-			case '*':c = arith(MUL); break;
-			case '/':c = arith(DIV); break;
-			case '%':c = arith(MOD); break;
-			case '<':c = arith(CMP); break;
-			case '>':c = arith(CMP); break;
-			case '=':c = arith(CMP); break;
-			case '!':c = arith(CMP); break;
+			case PROC:c = proc(); break;
 			default:printf("[%3d]find unsupport cmd '%d'\n", lexer->line, s->kind); break;
 			}
-			if (c){ cs->codes.push_back(c); c->offset = cs->width; cs->width += c->width; }
+			if (c){ cs->codes.push_back(c); cs->offset = cs->width; cs->width += c->width; }
 		}
 	}
 	void write(FILE *fp){

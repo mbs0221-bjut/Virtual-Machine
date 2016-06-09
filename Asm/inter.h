@@ -36,6 +36,26 @@ struct Data :Code{
 	}
 };
 
+struct Func :Code{
+	string name;
+	list<Code*> codes;
+	virtual void code(FILE* fp){
+		list<Code*>::iterator iter;
+		for (iter = codes.begin(); iter != codes.end(); iter++){
+			(*iter)->code(fp);
+		}
+	}
+};
+
+struct Call :Code{
+	Func *func;
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("call\t %s\n", func->name.c_str());
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+	}
+};
+
 struct Load :Code{
 	BYTE reg;
 	WORD addr;

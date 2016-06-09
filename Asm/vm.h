@@ -62,14 +62,14 @@ class CPU{
 private:
 	WORD LENGTH = 0;
 	BYTE REG[0x100];
-	WORD SP, BP, SI, DI;				// 通用寄存器
-	WORD CS, DS, ES, SS;				// 段寄存器
-	WORD IN[0x100], OUT[0x100];			// I/O端口
-	WORD IP;							// 程序指针
-	WORD IBUS, DBUS, ABUS;				// 内部总线
-	BYTE RAM[0x10000];					// 内存
-	WORD CYCLE = 0;						// 执行周期
-	ALU ALU;							// ALU
+	WORD SP, BP, SI, DI;		// 通用寄存器
+	WORD CS, DS, ES, SS;		// 段寄存器
+	WORD PORT[0x100];			// I/O端口
+	WORD IP;					// 程序指针
+	WORD IBUS, DBUS, ABUS;		// 内部总线
+	BYTE RAM[0x10000];			// 内存
+	WORD CYCLE = 0;				// 执行周期
+	ALU ALU;					// ALU
 	BYTE ReadB(){
 		return RAM[IP++];
 	}

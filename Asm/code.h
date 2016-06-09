@@ -15,7 +15,17 @@ enum Tag{
 	MOV, IN, OUT,
 	SHL, SHR, SAL, SAR, SRL, SRR,// 
 	LOOP,
-	ID = 256, INT, END, LABEL, DATA, CODE, STACK
+	ID = 256, NUM, END, LABEL, DATA, CODE, STACK, PROC, ENDP, CALL
 };
 
+enum REG{
+	BP = 256,
+	SI,
+	DI,
+	CS,
+	DS,
+	ES,
+	SS,
+	SP
+};// Í¨ÓÃ¼Ä´æÆ÷
 #endif

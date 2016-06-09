@@ -1,22 +1,27 @@
-int a,b;
+int a,b,c,d,e,f;
+char num;
 
-a = 0;
-b = 24;
 
-for(a = 10;a > 0;a = a - 1){
-	b = b + 1;
+int draw(int x, int y, int z){
+	if(x < 10){
+		a = a - 10;
+	}
 }
 
-while(a < 10){
-	a = a + 1;
+int play(int x, int y, int z){
+	int p;
+	p = x + y + z;
 }
 
-do{
-	b = b - 1;
-}while(b > 12);
-
-if(b ! a){
-	a = 64;
-	b = 32;	
+int main(int a, int b){
+	int w;
+	for(a = 10;a > 0;a = a - 1){
+		b = b + 034;
+		if(b = 30){
+			continue;
+		}
+		b = b - 1;
+	}
+	draw(10, 11, 12);
+	play(10, 11, 12);
 }
-#

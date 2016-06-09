@@ -56,7 +56,7 @@ struct Type :Word{
 	}
 };
 
-Type* Type::Int = new Type(INT, "int", 2);
+Type* Type::Int = new Type(NUM, "int", 2);
 
 struct Integer :Token{
 	int value;
@@ -92,16 +92,34 @@ public:
 	Lexer(string fp){
 		words["data"] = new Word(DATA, "data");
 		words["code"] = new Word(CODE, "code");
-		words["int"] = new Word(INT, "int");
+		// 数据操作
 		words["load"] = new Word(LOAD, "load");
 		words["store"] = new Word(STORE, "store");
+		// 停机指令
 		words["halt"] = new Word(HALT, "halt");
-		words["label"] = new Word(LABEL, "label");
+		// 算术逻辑运算
+		words["sub"] = new Word(SUB, "jg");
+		words["add"] = new Word(ADD, "jg");
+		// 跳转指令
 		words["jmp"] = new Word(JMP, "jmp");
 		words["jb"] = new Word(JB, "jb");
+		words["jbe"] = new Word(JBE, "jbe");
 		words["je"] = new Word(JE, "je");
-		words["jne"] = new Word(JNE, "jne");
+		words["jge"] = new Word(JGE, "jge");
 		words["jg"] = new Word(JG, "jg");
+		words["jne"] = new Word(JNE, "jne");
+		// 函数调用
+		words["call"] = new Word(CALL, "call");
+		// 段寄存器
+		words["bp"] = new Integer(NUM, REG::DS);
+		words["sp"] = new Integer(NUM, REG::CS);
+		words["bp"] = new Integer(NUM, REG::SS);
+		words["sp"] = new Integer(NUM, REG::ES);
+		// 寄存器
+		words["bp"] = new Integer(NUM, REG::BP);
+		words["sp"] = new Integer(NUM, REG::SP);
+		words["si"] = new Integer(NUM, REG::SI);
+		words["di"] = new Integer(NUM, REG::DI);
 		inf.open(fp, ios::in);
 	}
 	~Lexer(){
@@ -148,7 +166,7 @@ public:
 							inf.read(&ch, sizeof(ch));
 						} while (isdigit(ch) || (ch >= 'a'&&ch <= 'f') || (ch >= 'A'&&ch <= 'F'));
 						inf.seekg(-1, ios::cur);
-						return new Integer(INT, value);
+						return new Integer(NUM, value);
 					}else{
 						printf("错误的十六进制!");
 					}
@@ -159,11 +177,11 @@ public:
 						inf.read(&ch, sizeof(ch));
 					} while (ch >= '0'&&ch <= '7');
 					inf.seekg(-1, ios::cur);
-					return new Integer(INT, value);
+					return new Integer(NUM, value);
 				}else{
 					//十进制整数0
 					inf.seekg(-1, ios::cur);
-					return new Integer(INT, 0);
+					return new Integer(NUM, 0);
 				}
 			}else{
 				//除0外十进制整数,5状态
@@ -172,7 +190,7 @@ public:
 					inf.read(&ch, sizeof(ch));
 				} while (isdigit(ch));
 				inf.seekg(-1, ios::cur);//回退一个字符
-				return new Integer(INT, value);
+				return new Integer(NUM, value);
 			}
 		}
 		return new Token(ch);

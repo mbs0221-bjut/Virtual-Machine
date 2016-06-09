@@ -12,9 +12,11 @@
 
 using namespace std;
 
-//宏定义种别码
 enum Tag{
-	IF = 256, THEN, ELSE, DO, WHILE, FOR, CASE, ID, INT, END
+	IF = 256, THEN, ELSE, DO, WHILE, FOR, CASE, BREAK, CONTINUE, 
+	BASIC, INT, CHAR, 
+	END,
+	ID, NUM, FUNCTION
 };
 
 // 词法单元
@@ -28,7 +30,23 @@ struct Token{
 	}
 	virtual string code(){
 		ostringstream s;
-		s << kind;
+		switch (kind){
+		case IF:s << "IF"; break;
+		case THEN:s << "THEN"; break;
+		case ELSE:s << "ELSE"; break;
+		case DO:s << "DO"; break;
+		case WHILE:s << "WHILE"; break;
+		case FOR:s << "FOR"; break;
+		case CASE:s << "CASE"; break;
+		case BREAK:s << "BREAK"; break;
+		case CONTINUE:s << "CONTINUE"; break;
+		case ID:s << "ID"; break;
+		case BASIC:s << "BASIC"; break;
+		case INT:s << "INT"; break;
+		case CHAR:s << "CHAR"; break;
+		case END:s << "END"; break;
+		default:s << (char)kind; break;
+		}
 		return s.str();
 	}
 };
@@ -42,13 +60,13 @@ struct Word :Token{
 		return s.str();
 	}
 	virtual string code(){
-		return "";
+		return word;
 	}
 };
 
 struct Type :Word{
 	int width;
-	static Type* Int;
+	static Type *Int, *Char, *Void;
 	Type(int kind, string word, int width) :Word(kind, word), width(width){  }
 	virtual string place(){
 		ostringstream s;
@@ -56,11 +74,13 @@ struct Type :Word{
 		return s.str();
 	}
 	virtual string code(){
-		return "";
+		return word;
 	}
 };
 
-Type* Type::Int = new Type(INT, "int", 2);
+Type* Type::Int = new Type(BASIC, "int", 2);
+Type* Type::Char = new Type(BASIC, "char", 1);
+Type* Type::Void = new Type(BASIC, "void", 0);
 
 struct Integer :Token{
 	int value;
@@ -71,7 +91,7 @@ struct Integer :Token{
 		return s.str();
 	}
 	virtual string code(){
-		return "";
+		return "INT";
 	}
 };
 
@@ -82,7 +102,9 @@ class Lexer{
 public:
 	int line = 1;
 	Lexer(string fp){
-		words["int"] = new Word(INT, "int");
+		words["int"] = Type::Int;
+		words["char"] = Type::Char;
+		words["void"] = Type::Void;
 		words["if"] = new Word(IF, "if");
 		words["then"] = new Word(THEN, "then");
 		words["else"] = new Word(ELSE, "else");
@@ -90,13 +112,15 @@ public:
 		words["while"] = new Word(WHILE, "while");
 		words["for"] = new Word(FOR, "for");
 		words["case"] = new Word(CASE, "case");
+		words["break"] = new Word(BREAK, "break");
+		words["continue"] = new Word(CONTINUE, "continue");
 		words["end"] = new Word(END, "end");
 		inf.open(fp, ios::in);
 	}
 	~Lexer(){
 		inf.close();
 		words.clear();
-		printf("~Lexer");
+		printf("~Lexer\n");
 	}
 	Token *scan()
 	{
@@ -138,7 +162,7 @@ public:
 							inf.read(&ch, sizeof(ch));
 						} while (isdigit(ch) || (ch >= 'a'&&ch <= 'f') || (ch >= 'A'&&ch <= 'F'));
 						inf.seekg(-1, ios::cur);
-						return new Integer(INT, value);
+						return new Integer(NUM, value);
 					}
 					else{
 						printf("错误的十六进制!");
@@ -151,12 +175,12 @@ public:
 						inf.read(&ch, sizeof(ch));
 					} while (ch >= '0'&&ch <= '7');
 					inf.seekg(-1, ios::cur);
-					return new Integer(INT, value);
+					return new Integer(NUM, value);
 				}
 				else{
 					//十进制整数0
 					inf.seekg(-1, ios::cur);
-					return new Integer(INT, 0);
+					return new Integer(NUM, 0);
 				}
 			}
 			else{
@@ -166,7 +190,7 @@ public:
 					inf.read(&ch, sizeof(ch));
 				} while (isdigit(ch));
 				inf.seekg(-1, ios::cur);//回退一个字符
-				return new Integer(INT, value);
+				return new Integer(NUM, value);
 			}
 		}
 		return new Token(ch);
