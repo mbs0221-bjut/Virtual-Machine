@@ -34,6 +34,12 @@
     <ClInclude Include="parser.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="lrparser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="G.txt">
+      <Filter>资源文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="data.s">
