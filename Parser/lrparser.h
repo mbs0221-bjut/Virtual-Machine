@@ -11,16 +11,16 @@ using namespace std;
 int Action[12][6] = {
 	{ 5, err, err, 4, err, err },	// 0
 	{ err, 6, err, err, err, acc },	//
-	{ err, -2, 7, err, -2, -2 },	// 2 E<-T.
-	{ err, -4, -4, err, -4, -4 },	// 3 T<-F.
+	{ err, -2, 7, err, -2, -2 },	// 2 E->T.
+	{ err, -4, -4, err, -4, -4 },	// 3 T->F.
 	{ 5, err, err, 4, err, err },	// 4 
-	{ err, -6, -6, err, -6, -6 },	// 5 F<-id.
+	{ err, -6, -6, err, -6, -6 },	// 5 F->id.
 	{ 5, err, err, 4, err, err },	//
 	{ 5, err, err, 4, err, err },	//
 	{ err, 6, err, err, 11, err },	//
-	{ err, -1, 7, err, -1, -1 },	// 9 E<-E+T.
-	{ err, -3, -3, err, -3, -3 },	// 10 T<-T*F
-	{ err, -5, -5, err, -5, -5 }	// 11 F<-(E).
+	{ err, -1, 7, err, -1, -1 },	// 9 E->E+T.
+	{ err, -3, -3, err, -3, -3 },	// 10 T->T*F
+	{ err, -5, -5, err, -5, -5 }	// 11 F->(E).
 };
 
 int GoTo[12][3] = {
@@ -48,13 +48,13 @@ struct Symbol{
 
 int lookup(char c, int state){
 	int index = str.find_first_of(c);
-	//printf("lookup:%d %c <- %d\n", state, c, Action[state][index]);
+	printf("action:%d %c -> %d\n", state, c, Action[state][index]);
 	return Action[state][index];
 }
 
 int go(char c, int state){
 	int index = nt.find_first_of(c);
-	//printf("goto:%d %c <- %d\n", state, c, GoTo[state][index]);
+	printf("goto:%d %c -> %d\n", state, c, GoTo[state][index]);
 	return GoTo[state][index];
 }
 
@@ -78,8 +78,8 @@ void parse(FILE *fp){
 		}else if (temp < 0){
 			// ¹æÔ¼
 			switch (-temp){
-			case 1://E<-E+T.
-				printf("E<-E+T.\n");
+			case 1://E->E+T.
+				printf("E->E+T.\n");
 				ss.pop();
 				ss.pop();
 				ss.pop();
@@ -89,15 +89,15 @@ void parse(FILE *fp){
 				// reduce
 				sts.push('E');
 				break;
-			case 2://E<-T.
-				printf("E<-T.\n");
+			case 2://E->T.
+				printf("E->T.\n");
 				ss.pop();
 				sts.pop();
 				// reduce
 				sts.push('E');
 				break;
-			case 3://T<-T*F.
-				printf("T<-T*F.\n");
+			case 3://T->T*F.
+				printf("T->T*F.\n");
 				ss.pop();
 				ss.pop();
 				ss.pop();
@@ -107,15 +107,15 @@ void parse(FILE *fp){
 				// reduce
 				sts.push('T');
 				break;
-			case 4://T<-F.
-				printf("T<-F.\n");
+			case 4://T->F.
+				printf("T->F.\n");
 				ss.pop();
 				sts.pop();
 				// reduce
 				sts.push('T');
 				break;
-			case 5://F<-(E).
-				printf("F<-(E).\n");
+			case 5://F->(E).
+				printf("F->(E).\n");
 				ss.pop();
 				ss.pop();
 				ss.pop();
@@ -125,8 +125,8 @@ void parse(FILE *fp){
 				// reduce
 				sts.push('F');
 				break;
-			case 6://F<-id.
-				printf("F<-id.\n");
+			case 6://F->id.
+				printf("F->id.\n");
 				ss.pop();
 				sts.pop();
 				// reduce
