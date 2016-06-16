@@ -17,8 +17,14 @@ using namespace std;
 #define BIT_ERR		0x0001
 
 // 内存寻址方式
-#define MR_A		0x00// 0000立即数
-#define MR_B		0x40// 0100直接寻址
+#define MR_A		0x80// imm立即寻址
+#define MR_B		0x40// addr直接寻址
+#define MR_C		0x20// [addr]间接寻址
+#define MR_D		0x10// reg寄存器寻址
+#define MR_E		0x08// [reg]寄存器间接寻址
+#define MR_F		0x04// offset相对寻址
+#define MR_G		0x02// [BP]基址寻址
+#define MR_H		0x01// [reg+addr]变址寻址
 // 字/字节操作
 #define MR_BYTE		0x80
 // [111][111][0][0]

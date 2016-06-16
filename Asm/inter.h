@@ -1,11 +1,14 @@
 #include "lexer.h"
 
+// 标签
 struct Label{
 	Word *w;
 	WORD offset;
 	Label(Word *w, int offset) :w(w), offset(offset) {  }
 };
 
+//----------------参考RISC指令集----------------
+// 代码
 struct Code{
 	BYTE opt;
 	WORD line = 0;// 当前指令在汇编文件中的位置
@@ -16,6 +19,7 @@ struct Code{
 	}
 };
 
+// 代码块
 struct Codes :Code{
 	list<Code*> codes;
 	virtual void code(FILE* fp){
@@ -26,6 +30,7 @@ struct Codes :Code{
 	}
 };
 
+// 数据段
 struct Data :Code{
 	virtual void code(FILE* fp){
 		Code::code(fp);
@@ -36,6 +41,7 @@ struct Data :Code{
 	}
 };
 
+// 函数
 struct Func :Code{
 	string name;
 	list<Code*> codes;
@@ -47,8 +53,19 @@ struct Func :Code{
 	}
 };
 
+// 参数传递
+struct Param :Code{
+	BYTE reg;// 寄存器
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("param\t$%04x;%s\n", opt, reg);
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+	}
+};
+
+// 函数调用
 struct Call :Code{
-	Func *func;
+	Func *func;// 函数
 	virtual void code(FILE* fp){
 		Code::code(fp);
 		printf("call\t$%04x;%s\n", func->offset, func->name.c_str());
@@ -56,9 +73,11 @@ struct Call :Code{
 	}
 };
 
+// Load指令
 struct Load :Code{
-	BYTE reg;
-	WORD addr;
+	BYTE am;// 内存地址寻址方式
+	BYTE reg;// 通用寄存器
+	WORD addr;// RAM地址
 	virtual void code(FILE* fp){
 		Code::code(fp);
 		printf("load\t$%02x $%02x $%04x\n", opt, reg, addr);
@@ -68,9 +87,11 @@ struct Load :Code{
 	}
 };// 直接寻址
 
+// Store指令
 struct Store :Code{
-	BYTE reg;
-	WORD addr;
+	BYTE am;// 内存地址寻址方式
+	BYTE reg;// 通用寄存器
+	WORD addr;// RAM地址
 	virtual void code(FILE* fp){
 		Code::code(fp);
 		printf("store\t$%02x $%02x $%04x\n", opt, reg, addr);
@@ -80,6 +101,7 @@ struct Store :Code{
 	}
 };
 
+// 入栈指令
 struct Push :Code{
 	BYTE reg;
 	virtual void code(FILE* fp){
@@ -88,8 +110,9 @@ struct Push :Code{
 		fwrite(&opt, sizeof(BYTE), 1, fp);
 		fwrite(&reg, sizeof(BYTE), 1, fp);
 	}
-};// 直接寻址
+};
 
+// 出栈指令
 struct Pop :Code{
 	BYTE reg;
 	virtual void code(FILE* fp){
@@ -100,6 +123,7 @@ struct Pop :Code{
 	}
 };
 
+// 停机指令
 struct Halt:Code{
 	virtual void code(FILE* fp){
 		Code::code(fp);
@@ -109,6 +133,7 @@ struct Halt:Code{
 	}
 };
 
+// 跳转指令
 struct Jmp :Code{
 	Label *addr;
 	virtual void code(FILE* fp){
@@ -119,6 +144,7 @@ struct Jmp :Code{
 	}
 };
 
+// 双目运算指令
 struct Arith :Code{
 	BYTE reg1, reg2, reg3;
 	virtual void code(FILE* fp){
@@ -131,6 +157,7 @@ struct Arith :Code{
 	}
 };
 
+// 单目运算指令
 struct Unary :Code{
 	BYTE reg1, reg2;
 	virtual void code(FILE* fp){
@@ -140,4 +167,38 @@ struct Unary :Code{
 		fwrite(&reg1, sizeof(BYTE), 1, fp);
 		fwrite(&reg2, sizeof(BYTE), 1, fp);
 	}
+};
+
+//----------------参考MIPS指令集----------------
+
+#define OP		0xFC000000	// 11111100 00000000 00000000 00000000
+#define RS		0x03E00000	// 00000011 11100000 00000000 00000000
+#define RT		0x001F0000	// 00000000 00011111 00000000 00000000
+#define RD		0x0000F800	// 00000000 00000000 11111000 00000000
+#define SHAMT	0x000007C0	// 00000000 00000000 00000111 11000000
+#define FUNC	0x0000003F	// 00000000 00000000 00000000 00111111
+#define IMM		0x0000FFFF	// 00000000 00000000 11111111 11111111
+#define ADDR	0x03FFFFFF	// 00000011 11111111 11111111 11111111
+
+struct Intruction{
+	UINT inst;
+	WORD line = 0;// 当前指令在汇编文件中的位置
+	WORD width = 0;// 当前代码所占用的宽度
+	WORD offset = 0;// 当前代码段的偏移量
+	virtual void code(FILE* fp){
+		printf("[%04d][%04d][%04x]", line, width, offset);
+		fwrite(&inst, sizeof(UINT), 1, fp);
+	}
+};
+
+struct R_Type :Intruction{
+	 
+};
+
+struct I_Type :Intruction{
+
+};
+
+struct J_Type :Intruction{
+
 };

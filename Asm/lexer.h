@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include <map>
+#include <list>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -44,7 +45,7 @@ struct Word :Token{
 
 struct Type :Word{
 	int width;
-	static Type* Int;
+	static Type *Int, *Reg;
 	Type(int kind, string word, int width) :Word(kind, word), width(width){  }
 	virtual string place(){
 		ostringstream s;
@@ -57,6 +58,7 @@ struct Type :Word{
 };
 
 Type* Type::Int = new Type(NUM, "int", 2);
+Type* Type::Reg = new Type(REG, "int", 1);
 
 struct Integer :Token{
 	int value;
@@ -117,15 +119,33 @@ public:
 		words["endp"] = new Word(ENDP, "endp");
 		words["call"] = new Word(CALL, "call");
 		// ¶Î¼Ä´æÆ÷
-		words["ds"] = new Integer(NUM, REG::DS);
-		words["cs"] = new Integer(NUM, REG::CS);
-		words["ss"] = new Integer(NUM, REG::SS);
-		words["es"] = new Integer(NUM, REG::ES);
+		words["ds"] = new Integer(REG, Register::DS);
+		words["cs"] = new Integer(REG, Register::CS);
+		words["ss"] = new Integer(REG, Register::SS);
+		words["es"] = new Integer(REG, Register::ES);
 		// ¼Ä´æÆ÷
-		words["bp"] = new Integer(NUM, REG::BP);
-		words["sp"] = new Integer(NUM, REG::SP);
-		words["si"] = new Integer(NUM, REG::SI);
-		words["di"] = new Integer(NUM, REG::DI);
+		words["bp"] = new Integer(REG, Register::BP);
+		words["sp"] = new Integer(REG, Register::SP);
+		words["si"] = new Integer(REG, Register::SI);
+		words["di"] = new Integer(REG, Register::DI);
+		// MIPSÖ¸Áî¼¯
+		// R-type
+		words["add"] = new Integer(RTYPE, 0x00000020);
+		words["addu"] = new Integer(RTYPE, 0x00000021);
+		words["sub"] = new Integer(RTYPE, 0x00000022);
+		words["subu"] = new Integer(RTYPE, 0x00000023);
+		words["and"] = new Integer(RTYPE, 0x00000024);
+		words["or"] = new Integer(RTYPE, 0x00000025);
+		words["xor"] = new Integer(RTYPE, 0x00000026);
+		words["nor"] = new Integer(RTYPE, 0x00000027);
+		words["slt"] = new Integer(RTYPE, 0x0000002A);
+		words["sltu"] = new Integer(RTYPE, 0x0000002B);
+		words["sll"] = new Integer(RTYPE, 0x00000000);
+		words["srl"] = new Integer(RTYPE, 0x00000002);
+		words["ara"] = new Integer(RTYPE, 0x00000003);
+		words["add"] = new Integer(RTYPE, 0x00000004);
+		words["add"] = new Integer(RTYPE, 0x00000005);
+		words["srav"] = new Integer(RTYPE, 0x00000006);
 		inf.open(fp, ios::in);
 	}
 	~Lexer(){
