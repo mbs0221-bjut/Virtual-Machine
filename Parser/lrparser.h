@@ -48,13 +48,13 @@ struct Symbol{
 
 int lookup(char c, int state){
 	int index = str.find_first_of(c);
-	printf("action:%d %c -> %d\n", state, c, Action[state][index]);
+	//printf("action:%d %c -> %d\n", state, c, Action[state][index]);
 	return Action[state][index];
 }
 
 int go(char c, int state){
 	int index = nt.find_first_of(c);
-	printf("goto:%d %c -> %d\n", state, c, GoTo[state][index]);
+	//printf("goto:%d %c -> %d\n", state, c, GoTo[state][index]);
 	return GoTo[state][index];
 }
 

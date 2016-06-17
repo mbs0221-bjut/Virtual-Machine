@@ -348,7 +348,6 @@ struct Function : Word{
 		fprintf(fp, "proc %s:\n", word.c_str());
 		list<Id*>::iterator iter;
 		int width = type->width;
-		//reverse(params->ids.begin(), params->ids.end());
 		for (iter = params->ids.begin(); iter != params->ids.end(); iter++){
 			(*iter)->offset = width;
 			(*iter)->global = false;
