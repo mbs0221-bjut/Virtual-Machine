@@ -78,8 +78,8 @@ struct Type :Word{
 	}
 };
 
-Type* Type::Int = new Type(BASIC, "int", 2);
-Type* Type::Char = new Type(BASIC, "char", 1);
+Type* Type::Int = new Type(BASIC, "dw", 2);
+Type* Type::Char = new Type(BASIC, "db", 1);
 Type* Type::Void = new Type(BASIC, "void", 0);
 
 struct Integer :Token{

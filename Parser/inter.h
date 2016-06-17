@@ -92,7 +92,15 @@ struct Arith :Expr{
 		Expr::code(fp);
 		E1->code(fp);
 		E2->code(fp);
-		fprintf(fp, "\t%c $%d $%d $%d\n", opt, E1->label, E2->label, label);
+		switch (opt){
+		case '+':fprintf(fp, "\tadd "); break;
+		case '-':fprintf(fp, "\tsub "); break;
+		case '*':fprintf(fp, "\tmul "); break;
+		case '/':fprintf(fp, "\tdiv "); break;
+		case '&':fprintf(fp, "\tand "); break;
+		default:break;
+		}
+		fprintf(fp, "$%d $%d $%d\n", E1->label, E2->label, label);
 	}
 };
 
@@ -115,10 +123,11 @@ struct Id :Expr{
 	Id(Type *t, Word *s) :Expr('@'), t(t), s(s){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
+		char width = t == Type::Int ? 'w' : 'b';
 		if (global){
-			fprintf(fp, "\tload $%d &%d\n", label, offset);
+			fprintf(fp, "\tload%c $%d %s\n", width, label, s->word.c_str());
 		}else{
-			fprintf(fp, "\tload $%d @%d\n", label, offset);
+			fprintf(fp, "\tload%c $%d %s\n", width, label, s->word.c_str());
 		}
 	}
 };
@@ -128,8 +137,8 @@ struct Number :Expr{
 	Number(Integer *s) :Expr('@'), s(s){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
-		int width = s->value > 256 ? 2 : 1;
-		fprintf(fp, "\tload $%d %d\n", label, s->value);
+		char width = s->value > 256 ? 'w' : 'b';
+		fprintf(fp, "\tload%c $%d %d\n", width, label, s->value);
 	}
 };
 
@@ -157,9 +166,9 @@ struct Assign :Stmt{
 		printf("assign\n");
 		E2->code(fp);
 		if (E1->global){
-			fprintf(fp, "\tstore $%d &%d;%s\n", E2->label, E1->offset, E1->s->word.c_str());
+			fprintf(fp, "\tstore %s $%d\n", E1->s->word.c_str(), E2->label);
 		}else{
-			fprintf(fp, "\tstore $%d @%d;%s\n", E2->label, E1->offset, E1->s->word.c_str());
+			fprintf(fp, "\tstore %s $%d\n", E1->s->word.c_str(), E2->label);
 		}
 	}
 };
@@ -385,33 +394,18 @@ struct Call :Expr{
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("call\n");
-		// 计算参数
+		// 参数计算
 		list<Expr*>::iterator iter;
 		for (iter = args.begin(); iter != args.end(); iter++){
 			(*iter)->code(fp);
 		}
-		// 入栈
-		fprintf(fp, "\tpush $bp\n");
-		fprintf(fp, "\tload $bp $sp\n");
-		// 参数入栈
+		// 传递参数
 		reverse(args.begin(), args.end());
 		for (iter = args.begin(); iter != args.end(); iter++){
-			fprintf(fp, "\tpush $%d\n", (*iter)->label);
+			fprintf(fp, "\tparam $%d\n", (*iter)->label);
 		}
-		// 预留返回值空间
-		fprintf(fp, "\tsub $sp %d\n", func->type->width);
-		// 调用函数
-		fprintf(fp, "\tcall %s\n", func->word.c_str());
-		// 释放返回值空间
-		fprintf(fp, "\tadd $sp %d\n", func->type->width);
-		// 参数出栈
-		reverse(args.begin(), args.end());
-		for (iter = args.begin(); iter != args.end(); iter++){
-			fprintf(fp, "\tpop $%d\n", (*iter)->label);
-		}
-		// 出栈
-		fprintf(fp, "\tload $sp $bp\n");
-		fprintf(fp, "\tpop $bp\n");
+		// 调用语句
+		fprintf(fp, "\tcall %s %d\n", func->word.c_str(), args.size());
 	}
 };
 
@@ -422,15 +416,17 @@ struct Global :Node{
 		Node::code(fp);
 		if (!ids.empty()){
 			int width = 0;
+			fprintf(fp, ".data\n");
 			list<Id*>::iterator iter;
 			for (iter = ids.begin(); iter != ids.end(); iter++){
 				(*iter)->offset = width;
 				(*iter)->global = true;
+				fprintf(fp, "\t%s %s\n", (*iter)->t->word.c_str(), (*iter)->s->word.c_str());
 				width += (*iter)->t->width;
 			}
-			fprintf(fp, ".data %d\n", width);
-			fprintf(fp, ".stack 1000\n");
 		}
+		fprintf(fp, ".stack\n");
+		fprintf(fp, "\t\db dup(0x1000)\n");
 		if (!funcs.empty()){
 			fprintf(fp, ".code\n");
 			list<Function*>::iterator iter2;
