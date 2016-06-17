@@ -92,6 +92,7 @@ class Lexer{
 public:
 	int line = 1;
 	Lexer(string fp){
+		inf.open(fp, ios::in);
 		words["data"] = new Word(DATA, "data");
 		words["stack"] = new Word(STACK, "stack");
 		words["code"] = new Word(CODE, "code");
@@ -119,16 +120,18 @@ public:
 		words["endp"] = new Word(ENDP, "endp");
 		words["call"] = new Word(CALL, "call");
 		// ¶Î¼Ä´æÆ÷
-		words["ds"] = new Integer(REG, Register::DS);
-		words["cs"] = new Integer(REG, Register::CS);
-		words["ss"] = new Integer(REG, Register::SS);
-		words["es"] = new Integer(REG, Register::ES);
+		words["ds"] = new Integer(REG, Reg::DS);
+		words["cs"] = new Integer(REG, Reg::CS);
+		words["ss"] = new Integer(REG, Reg::SS);
+		words["es"] = new Integer(REG, Reg::ES);
 		// ¼Ä´æÆ÷
-		words["bp"] = new Integer(REG, Register::BP);
-		words["sp"] = new Integer(REG, Register::SP);
-		words["si"] = new Integer(REG, Register::SI);
-		words["di"] = new Integer(REG, Register::DI);
-		// MIPSÖ¸Áî¼¯
+		words["bp"] = new Integer(REG, Reg::BP);
+		words["sp"] = new Integer(REG, Reg::SP);
+		words["si"] = new Integer(REG, Reg::SI);
+		words["di"] = new Integer(REG, Reg::DI);
+	}
+	// MIPSÖ¸Áî¼¯
+	void MIPS(){
 		// R-type
 		words["add"] = new Integer(RTYPE, 0x00000020);
 		words["addu"] = new Integer(RTYPE, 0x00000021);
@@ -146,7 +149,9 @@ public:
 		words["add"] = new Integer(RTYPE, 0x00000004);
 		words["add"] = new Integer(RTYPE, 0x00000005);
 		words["srav"] = new Integer(RTYPE, 0x00000006);
-		inf.open(fp, ios::in);
+		// I-Type
+
+		// J-Type
 	}
 	~Lexer(){
 		inf.close();

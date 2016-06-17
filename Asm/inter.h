@@ -168,37 +168,3 @@ struct Unary :Code{
 		fwrite(&reg2, sizeof(BYTE), 1, fp);
 	}
 };
-
-//----------------参考MIPS指令集----------------
-
-#define OP		0xFC000000	// 11111100 00000000 00000000 00000000
-#define RS		0x03E00000	// 00000011 11100000 00000000 00000000
-#define RT		0x001F0000	// 00000000 00011111 00000000 00000000
-#define RD		0x0000F800	// 00000000 00000000 11111000 00000000
-#define SHAMT	0x000007C0	// 00000000 00000000 00000111 11000000
-#define FUNC	0x0000003F	// 00000000 00000000 00000000 00111111
-#define IMM		0x0000FFFF	// 00000000 00000000 11111111 11111111
-#define ADDR	0x03FFFFFF	// 00000011 11111111 11111111 11111111
-
-struct Intruction{
-	UINT inst;
-	WORD line = 0;// 当前指令在汇编文件中的位置
-	WORD width = 0;// 当前代码所占用的宽度
-	WORD offset = 0;// 当前代码段的偏移量
-	virtual void code(FILE* fp){
-		printf("[%04d][%04d][%04x]", line, width, offset);
-		fwrite(&inst, sizeof(UINT), 1, fp);
-	}
-};
-
-struct R_Type :Intruction{
-	 
-};
-
-struct I_Type :Intruction{
-
-};
-
-struct J_Type :Intruction{
-
-};

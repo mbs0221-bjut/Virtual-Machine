@@ -58,7 +58,7 @@ private:
 			if (c){ 
 				printf("[%03d]find proc.\n", c->line);
 				cs->codes.push_back(c);
-				cs->offset = cs->width; 
+				c->offset = cs->width; 
 				cs->width += c->width;
 			}
 		}
@@ -91,8 +91,8 @@ private:
 			case JG: c = jmp(JG); break;
 			case JMP: c = jmp(JMP); break;
 			case '~':c = unary(); break;
-			case ADD:c = bino(ADD); break;
-			case SUB:c = bino(SUB); break;
+			case ADD:c = arith(ADD); break;
+			case SUB:c = arith(SUB); break;
 			case '+':c = arith(ADD); break;
 			case '-':c = arith(SUB); break;
 			case '*':c = arith(MUL); break;
@@ -102,7 +102,7 @@ private:
 			case '>':c = arith(CMP); break;
 			case '=':c = arith(CMP); break;
 			case '!':c = arith(CMP); break;
-			default:printf("[%3d]find unsupport cmd '%c\n", lexer->line, s->kind); break;
+			default:printf("[%3d]find unsupported cmd '%c\n", lexer->line, s->kind); break;
 			}
 			if (c){ f->codes.push_back(c); c->offset = f->width; f->width += c->width; }
 		}
@@ -159,10 +159,10 @@ private:
 		l->reg = ((Integer*)s)->value;
 		match(NUM);
 		switch (s->kind){
-		case '#':l->opt |= MR_B; match('#'); i = s; match(NUM); break;// 立即数寻址
-		case '@':l->opt |= MR_B; match('@'); i = s; match(NUM); break;// BP间接寻址
-		case '&':l->opt |= MR_B; match('&'); i = s; match(NUM); break;// DS间接寻址
-		case '$':l->opt |= MR_B; match('$'); i = s; match(NUM); break;// DS间接寻址
+		case NUM:l->am |= MR_A; i = s; match(NUM); break;// imm立即数寻址
+		case '#':l->am |= MR_B; match('#'); i = s; match(NUM); break;// #addr直接寻址
+		case '[':l->am |= MR_C; match('['); i = s; match(NUM); match(']'); break;// [addr]间接寻址
+		case REG:l->am |= MR_D; i = s; match(REG); break;// reg寄存器寻址
 		default:break;
 		}
 		l->addr = ((Integer*)i)->value;
@@ -180,11 +180,10 @@ private:
 		l->reg = ((Integer*)s)->value;
 		match(NUM);
 		switch (s->kind){
-		case '#':l->opt |= MR_B; match('#'); i = s; match(NUM); break;// 立即数寻址
-		case '@':l->opt |= MR_B; match('@'); i = s; match(NUM); break;// BP间接寻址
-		case '&':l->opt |= MR_B; match('&'); i = s; match(NUM); break;// DS间接寻址
-		case '$':l->opt |= MR_B; match('$'); i = s; match(NUM); break;// DS间接寻址
-		case NUM:l->opt |= MR_A; i = s; match(NUM); break;
+		case NUM:l->am |= MR_A; i = s; match(NUM); break;// imm立即数寻址
+		case '#':l->am |= MR_B; match('#'); i = s; match(NUM); break;// #addr直接寻址
+		case '[':l->am |= MR_C; match('['); i = s; match(NUM); match(']'); break;// [addr]间接寻址
+		case REG:l->am |= MR_D; i = s; match(REG); break;// reg寄存器寻址
 		default:break;
 		}
 		l->addr = ((Integer*)i)->value;
@@ -216,13 +215,6 @@ private:
 		match(NUM);
 		u->width = 3;
 		return u;
-	}
-	Code* bino(BYTE b){
-		match(b);
-		match('$');
-		match(NUM);
-		match(NUM);
-		return nullptr;
 	}
 	Code* arith(BYTE b){
 		Arith *a = new Arith;
