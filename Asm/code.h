@@ -4,7 +4,6 @@
 typedef unsigned char BYTE;
 typedef unsigned short int WORD;
 
-//宏定义种别码
 enum Tag{
 	HALT,
 	ADD, SUB, MUL, DIV, MOD, CMP,// integer operator
