@@ -46,7 +46,7 @@ struct Load :Code{
 		fwrite(&reg, sizeof(BYTE), 1, fp);
 		fwrite(&addr, sizeof(WORD), 1, fp);
 	}
-};// Ö±½ÓÑ°Ö·
+};
 
 struct Store :Code{
 	BYTE reg;

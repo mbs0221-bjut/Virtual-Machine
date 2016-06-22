@@ -22,15 +22,15 @@ using namespace std;
 // 字/字节操作
 #define MR_BYTE		0x80
 // [111][111][0][0]
-#define REG_SRC_MASK	0xE0
-#define REG_DST_MASK	0x1C
+#define REG_SRC_MASK	0xE0	// 源寄存器
+#define REG_DST_MASK	0x1C	// 目的寄存器
 
 class ALU{
 public:
-	BYTE OP;
-	WORD RA, RB;
-	WORD R;
-	WORD FR;
+	BYTE OP;		// 运算指令
+	WORD RA, RB;	// 操作数
+	WORD R;			// 结果寄存器
+	WORD FR;		// 标准寄存器
 	ALU(){
 		OP = 0;
 		RA = RB = R = 0;

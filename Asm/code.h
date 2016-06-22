@@ -5,8 +5,9 @@ typedef unsigned char BYTE;
 typedef unsigned short int WORD;
 
 enum Tag{
+	// 虚拟机指令集
 	HALT,
-	ADD, SUB, MUL, DIV, MOD, CMP,// integer operator
+	ADD, SUB, MUL, DIV, MOD, CMP,
 	JMP, JNE, JG, JE, JB, JGE, JBE,
 	LOAD, STORE,
 	PUSH, POP,
@@ -14,6 +15,7 @@ enum Tag{
 	MOV, IN, OUT,
 	SHL, SHR, SAL, SAR, SRL, SRR,// 
 	LOOP,
+	// 关键字
 	ID = 256, INT, END, LABEL, DATA, CODE, STACK
 };
 

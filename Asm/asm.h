@@ -72,8 +72,8 @@ private:
 		l->reg = ((Integer*)s)->value;
 		match(INT);
 		switch (s->kind){
-		case '#':l->opt |= MR_A; match('#'); break;
-		case '*':l->opt |= MR_B; match('*'); break;
+		case '#':l->opt |= MR_A; match('#'); break;// 立即数
+		case '*':l->opt |= MR_B; match('*'); break;// 直接寻址
 		default:break;
 		}
 		l->addr = ((Integer*)s)->value;
@@ -85,8 +85,7 @@ private:
 		match(LABEL);
 		if (lables.find(((Word*)s)->word) == lables.end()){
 			lables[((Word*)s)->word] = new Label((Word*)s, cs->width);
-		}
-		else{
+		}else{
 			lables[((Word*)s)->word]->offset = cs->width;
 		}
 		match(ID);
@@ -130,11 +129,9 @@ private:
 		j->opt = b;
 		match(s->kind);
 		if (lables.find(((Word*)s)->word) == lables.end()){
-			// 没有标签
 			j->addr = new Label((Word*)s, cs->width);
 			lables[((Word*)s)->word] = j->addr;
-		}
-		else{
+		}else{
 			j->addr = lables[((Word*)s)->word];
 		}
 		match(ID);
@@ -174,7 +171,7 @@ public:
 			case '>':c = arith(CMP); break;
 			case '=':c = arith(CMP); break;
 			case '!':c = arith(CMP); break;
-			default:printf("[%3d]find unsupport cmd '%d'\n", lexer->line, s->kind); break;
+			default:printf("[%3d]find unsupported instuction '%d'\n", lexer->line, s->kind); break;
 			}
 			if (c){ cs->codes.push_back(c); c->offset = cs->width; cs->width += c->width; }
 		}

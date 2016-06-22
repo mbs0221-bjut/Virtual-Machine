@@ -2,8 +2,8 @@
 
 void CPU::init(){
 	DS = CS = BP = IP = 0;
-	SS = 0xffff;// Õ»»ùÖ·
-	SP = SS;// Õ»Ö¸Õë
+	SS = 0xffff;
+	SP = SS;
 }
 void CPU::load(FILE *fp){
 	fread(&DS, sizeof(WORD), 1, fp);
@@ -144,7 +144,7 @@ void CPU::execute(){
 		case LOAD:
 			ABUS = ReadB();
 			if (TYPE == MR_BYTE){
-				switch (MR){// 01100000
+				switch (MR){
 				case MR_A:DBUS = ReadB(); break;
 				case MR_B:DBUS = ReadB(ReadB());  break;
 				default:printf("ERROR %d\n", OP); break;
@@ -188,7 +188,7 @@ void CPU::execute(){
 			break;
 		}
 		trace();
-	}while (IP < LENGTH && OP != HALT);
+	}while (OP != HALT);
 }
 void CPU::trace(){
 #ifdef _DEBUG

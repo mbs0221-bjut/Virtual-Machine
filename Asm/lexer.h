@@ -75,18 +75,6 @@ struct Integer :Token{
 class Lexer{
 	ifstream inf;
 	map<string, Token*> words;
-	int hexToDec(char word[20])
-	{
-		char *str;
-		int l = strtol(word, &str, 16);
-		return l;
-	}
-	int octToDec(char word[20])
-	{
-		char *str;
-		int l = strtol(word, &str, 8);
-		return l;
-	}
 public:
 	int line = 1;
 	Lexer(string fp){
@@ -166,7 +154,7 @@ public:
 					return new Integer(INT, 0);
 				}
 			}else{
-				//除0外十进制整数,5状态
+				//除0外十进制整数
 				do{
 					value = 10 * value + ch - '0';
 					inf.read(&ch, sizeof(ch));
