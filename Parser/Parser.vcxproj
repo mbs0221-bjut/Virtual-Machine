@@ -74,8 +74,10 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="G.txt" />
     <ClInclude Include="inter.h" />
     <ClInclude Include="lexer.h" />
+    <ClInclude Include="lrparser.h" />
     <ClInclude Include="parser.h" />
   </ItemGroup>
   <ItemGroup>

@@ -1,11 +1,14 @@
 #include "lexer.h"
 
+// 标签
 struct Label{
 	Word *w;
 	WORD offset;
 	Label(Word *w, int offset) :w(w), offset(offset) {  }
 };
 
+//----------------参考RISC指令集----------------
+// 代码
 struct Code{
 	BYTE opt;
 	WORD line = 0;// 当前指令在汇编文件中的位置
@@ -16,6 +19,7 @@ struct Code{
 	}
 };
 
+// 代码块
 struct Codes :Code{
 	list<Code*> codes;
 	virtual void code(FILE* fp){
@@ -26,6 +30,7 @@ struct Codes :Code{
 	}
 };
 
+// 数据段
 struct Data :Code{
 	virtual void code(FILE* fp){
 		Code::code(fp);
@@ -36,6 +41,7 @@ struct Data :Code{
 	}
 };
 
+// 函数
 struct Func :Code{
 	string name;
 	list<Code*> codes;
@@ -47,18 +53,31 @@ struct Func :Code{
 	}
 };
 
-struct Call :Code{
-	Func *func;
+// 参数传递
+struct Param :Code{
+	BYTE reg;// 寄存器
 	virtual void code(FILE* fp){
 		Code::code(fp);
-		printf("call\t %s\n", func->name.c_str());
+		printf("param\t$%04x;%s\n", opt, reg);
 		fwrite(&opt, sizeof(BYTE), 1, fp);
 	}
 };
 
+// 函数调用
+struct Call :Code{
+	Func *func;// 函数
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("call\t$%04x;%s\n", func->offset, func->name.c_str());
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+	}
+};
+
+// Load指令
 struct Load :Code{
-	BYTE reg;
-	WORD addr;
+	BYTE am;// 内存地址寻址方式
+	BYTE reg;// 通用寄存器
+	WORD addr;// RAM地址
 	virtual void code(FILE* fp){
 		Code::code(fp);
 		printf("load\t$%02x $%02x $%04x\n", opt, reg, addr);
@@ -68,9 +87,11 @@ struct Load :Code{
 	}
 };// 直接寻址
 
+// Store指令
 struct Store :Code{
-	BYTE reg;
-	WORD addr;
+	BYTE am;// 内存地址寻址方式
+	BYTE reg;// 通用寄存器
+	WORD addr;// RAM地址
 	virtual void code(FILE* fp){
 		Code::code(fp);
 		printf("store\t$%02x $%02x $%04x\n", opt, reg, addr);
@@ -80,6 +101,29 @@ struct Store :Code{
 	}
 };
 
+// 入栈指令
+struct Push :Code{
+	BYTE reg;
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("push\t$%02x $%02x\n", opt, reg);
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+		fwrite(&reg, sizeof(BYTE), 1, fp);
+	}
+};
+
+// 出栈指令
+struct Pop :Code{
+	BYTE reg;
+	virtual void code(FILE* fp){
+		Code::code(fp);
+		printf("pop\t$%02x $%02x\n", opt, reg);
+		fwrite(&opt, sizeof(BYTE), 1, fp);
+		fwrite(&reg, sizeof(BYTE), 1, fp);
+	}
+};
+
+// 停机指令
 struct Halt:Code{
 	virtual void code(FILE* fp){
 		Code::code(fp);
@@ -89,6 +133,7 @@ struct Halt:Code{
 	}
 };
 
+// 跳转指令
 struct Jmp :Code{
 	Label *addr;
 	virtual void code(FILE* fp){
@@ -99,6 +144,7 @@ struct Jmp :Code{
 	}
 };
 
+// 双目运算指令
 struct Arith :Code{
 	BYTE reg1, reg2, reg3;
 	virtual void code(FILE* fp){
@@ -111,6 +157,7 @@ struct Arith :Code{
 	}
 };
 
+// 单目运算指令
 struct Unary :Code{
 	BYTE reg1, reg2;
 	virtual void code(FILE* fp){

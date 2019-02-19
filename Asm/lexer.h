@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include <map>
+#include <list>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -44,7 +45,7 @@ struct Word :Token{
 
 struct Type :Word{
 	int width;
-	static Type* Int;
+	static Type *Int, *Reg;
 	Type(int kind, string word, int width) :Word(kind, word), width(width){  }
 	virtual string place(){
 		ostringstream s;
@@ -57,6 +58,7 @@ struct Type :Word{
 };
 
 Type* Type::Int = new Type(NUM, "int", 2);
+Type* Type::Reg = new Type(REG, "int", 1);
 
 struct Integer :Token{
 	int value;
@@ -90,6 +92,7 @@ class Lexer{
 public:
 	int line = 1;
 	Lexer(string fp){
+		inf.open(fp, ios::in);
 		words["data"] = new Word(DATA, "data");
 		words["stack"] = new Word(STACK, "stack");
 		words["code"] = new Word(CODE, "code");
@@ -99,8 +102,11 @@ public:
 		// 停机指令
 		words["halt"] = new Word(HALT, "halt");
 		// 算术逻辑运算
-		words["sub"] = new Word(SUB, "jg");
-		words["add"] = new Word(ADD, "jg");
+		words["sub"] = new Word(SUB, "add");
+		words["add"] = new Word(ADD, "sub");
+		// 栈操作指令
+		words["push"] = new Word(PUSH, "push");
+		words["pop"] = new Word(POP, "pop");
 		// 跳转指令
 		words["jmp"] = new Word(JMP, "jmp");
 		words["jb"] = new Word(JB, "jb");
@@ -110,18 +116,42 @@ public:
 		words["jg"] = new Word(JG, "jg");
 		words["jne"] = new Word(JNE, "jne");
 		// 函数调用
+		words["proc"] = new Word(PROC, "proc");
+		words["endp"] = new Word(ENDP, "endp");
 		words["call"] = new Word(CALL, "call");
 		// 段寄存器
-		words["ds"] = new Integer(NUM, REG::DS);
-		words["cs"] = new Integer(NUM, REG::CS);
-		words["ss"] = new Integer(NUM, REG::SS);
-		words["es"] = new Integer(NUM, REG::ES);
+		words["ds"] = new Integer(REG, Reg::DS);
+		words["cs"] = new Integer(REG, Reg::CS);
+		words["ss"] = new Integer(REG, Reg::SS);
+		words["es"] = new Integer(REG, Reg::ES);
 		// 寄存器
-		words["bp"] = new Integer(NUM, REG::BP);
-		words["sp"] = new Integer(NUM, REG::SP);
-		words["si"] = new Integer(NUM, REG::SI);
-		words["di"] = new Integer(NUM, REG::DI);
-		inf.open(fp, ios::in);
+		words["bp"] = new Integer(REG, Reg::BP);
+		words["sp"] = new Integer(REG, Reg::SP);
+		words["si"] = new Integer(REG, Reg::SI);
+		words["di"] = new Integer(REG, Reg::DI);
+	}
+	// MIPS指令集
+	void MIPS(){
+		// R-type
+		words["add"] = new Integer(RTYPE, 0x00000020);
+		words["addu"] = new Integer(RTYPE, 0x00000021);
+		words["sub"] = new Integer(RTYPE, 0x00000022);
+		words["subu"] = new Integer(RTYPE, 0x00000023);
+		words["and"] = new Integer(RTYPE, 0x00000024);
+		words["or"] = new Integer(RTYPE, 0x00000025);
+		words["xor"] = new Integer(RTYPE, 0x00000026);
+		words["nor"] = new Integer(RTYPE, 0x00000027);
+		words["slt"] = new Integer(RTYPE, 0x0000002A);
+		words["sltu"] = new Integer(RTYPE, 0x0000002B);
+		words["sll"] = new Integer(RTYPE, 0x00000000);
+		words["srl"] = new Integer(RTYPE, 0x00000002);
+		words["ara"] = new Integer(RTYPE, 0x00000003);
+		words["add"] = new Integer(RTYPE, 0x00000004);
+		words["add"] = new Integer(RTYPE, 0x00000005);
+		words["srav"] = new Integer(RTYPE, 0x00000006);
+		// I-Type
+
+		// J-Type
 	}
 	~Lexer(){
 		inf.close();
@@ -134,9 +164,16 @@ public:
 		char ch;
 		do{
 			inf.read(&ch, sizeof(ch));
+			if (ch == ';'){
+				while (ch != '\n'){
+					//printf("skip:%c\n", ch);
+					inf.read(&ch, sizeof(ch));
+				}
+			}
 			if (ch == '\n')line++;
 		} while (ch == ' ' || ch == '\n' || ch == '\t');
-		if (ch == EOF){
+		if (inf.eof()){
+			printf("end of file\n");
 			return new Token(END);
 		}
 		if (isalpha(ch)){

@@ -1,5 +1,11 @@
 int a,b,c,d,e,f;
 
+int play(){
+	a = a - 1;
+	b = b - 1;
+	c = c - 1;
+}
+
 int draw(int x, int y){
 	int a1,b1;
 	a1 = x;
@@ -12,6 +18,9 @@ int draw(int x, int y){
 			int e1,f1;
 			e1 = c1;
 			f1 = d1;
+		}
+		{
+			play();
 		}
 	}
 }

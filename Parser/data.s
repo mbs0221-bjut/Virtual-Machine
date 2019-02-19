@@ -1,6 +1,28 @@
-.data 12
-.stack 1000
+.data
+	dw a
+	dw b
+	dw c
+	dw d
+	dw e
+	dw f
+.stack
+	db dup(0x1000)
 .code
+proc play:
+	sub $sp 0
+	loadw $0 a
+	loadb $7 1
+	sub $0 $7 $8
+	store a $8
+	loadw $1 b
+	loadb $9 1
+	sub $1 $9 $10
+	store b $10
+	loadw $2 c
+	loadb $11 1
+	sub $2 $11 $12
+	store c $12
+endp
 proc draw:
 	;x @2
 	;y @4
@@ -8,36 +30,27 @@ proc draw:
 	;b1 @2
 	;c1 @4
 	;d1 @6
-	;e1 @8
-	;f1 @10
-	- $sp 12
-	load $7 @2
-	store $7 @0;a1
-	load $8 @4
-	store $8 @2;b1
-	load $9 @0
-	store $9 @4;c1
-	load $10 @2
-	store $10 @6;d1
-	load $11 @4
-	store $11 @8;e1
-	load $12 @6
-	store $12 @10;f1
+	sub $sp 8
+	loadw $14 x
+	store a1 $14
+	loadw $15 y
+	store b1 $15
+	loadw $16 a1
+	store c1 $16
+	loadw $17 b1
+	store d1 $17
+	loadw $18 c1
+	store e1 $18
+	loadw $19 d1
+	store f1 $19
+	call play 0
 endp
 proc main:
 	;a @0
-	- $sp 2
-	load $18 10
-	load $19 11
-	push $bp
-	load $bp $sp
-	push $19
-	push $18
-	- $sp 2
-	call draw
-	+ $sp 2
-	pop $18
-	pop $19
-	load $sp $bp
-	pop $bp
+	sub $sp 2
+	loadb $26 10
+	loadb $27 11
+	param $27
+	param $26
+	call draw 2
 endp

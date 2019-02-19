@@ -15,6 +15,11 @@ void main(){
 	fclose(fp);
 	printf("编译结束\n");
 	delete p;
+	//fopen_s(&fp, "G.txt", "r");
+	//printf("开始SLR(1)语法分析\n");
+	//parse(fp);
+	//printf("SLR(1)语法分析结束\n");
+	//fclose(fp);
 	cin >> a;
 }
 
