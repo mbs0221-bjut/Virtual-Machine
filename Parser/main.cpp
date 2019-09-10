@@ -22,5 +22,3 @@ void main(){
 	//fclose(fp);
 	cin >> a;
 }
-
-

@@ -13,7 +13,7 @@
 using namespace std;
 
 enum Tag{
-	IF = 256, THEN, ELSE, DO, WHILE, FOR, CASE, BREAK, CONTINUE, 
+	IF = 256, THEN, ELSE, DO, WHILE, FOR, CASE, BREAK, CONTINUE, TRY, CATCH, FINALLY, THROW,
 	BASIC, INT, CHAR, 
 	END,
 	ID, NUM, FUNCTION
@@ -30,23 +30,17 @@ struct Token{
 	}
 	virtual string code(){
 		ostringstream s;
-		switch (kind){
-		case IF:s << "IF"; break;
-		case THEN:s << "THEN"; break;
-		case ELSE:s << "ELSE"; break;
-		case DO:s << "DO"; break;
-		case WHILE:s << "WHILE"; break;
-		case FOR:s << "FOR"; break;
-		case CASE:s << "CASE"; break;
-		case BREAK:s << "BREAK"; break;
-		case CONTINUE:s << "CONTINUE"; break;
-		case ID:s << "ID"; break;
-		case BASIC:s << "BASIC"; break;
-		case INT:s << "INT"; break;
-		case CHAR:s << "CHAR"; break;
-		case END:s << "END"; break;
-		default:s << (char)kind; break;
-		}
+		char *keywords[] = { 
+			"IF", "THEN", "ELSE", 
+			"DO", "WHILE", "FOR", 
+			"CASE", "BREAK", "CONTINUE", 
+			"TRY", "CATCH", "FINALLY", "THROW",
+			"ID", "BASIC", "INT", "CHAR", "END"
+		};
+		if (kind >=IF && kind <= END)
+			s << keywords[kind];
+		else
+			s << (char)kind;
 		return s.str();
 	}
 };
@@ -115,6 +109,7 @@ public:
 		words["break"] = new Word(BREAK, "break");
 		words["continue"] = new Word(CONTINUE, "continue");
 		words["end"] = new Word(END, "end");
+		words["try"] = new Word(TRY, "try");
 		inf.open(fp, ios::in);
 	}
 	~Lexer(){

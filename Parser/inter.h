@@ -328,6 +328,39 @@ struct Continue :Stmt{
 
 stack<Stmt*> Continue::cur = stack<Stmt*>();
 
+// 异常处理程序
+struct Throw : Stmt {
+	Type* exception;// 抛出异常
+	Throw() {
+		exception = nullptr;
+	}
+	virtual void code(FILE *fp) {
+		Stmt::code(fp);
+		// 跳转异常处理程序
+		fprintf(fp, "\tjmp L%d\n", exception->kind);
+	}
+};
+
+struct TryCatch : Stmt{
+	Stmt *pTry, *pCatch, *pFinnaly;
+	TryCatch() {
+		pTry = pCatch = pFinnaly = nullptr;
+	}
+	virtual void code(FILE *fp) {
+		Stmt::code(fp);
+		// 需要异常处理的程序
+		pTry->code(fp);
+		fprintf(fp, "\tjmp L%d\n", pCatch->next);
+		// 异常处理程序
+		fprintf(fp, "L%d:\n", pCatch->begin);
+		pCatch->code(fp);
+		fprintf(fp, "L%d:\n", pCatch->next);
+		// 扫尾操作
+		pFinnaly->code(fp);
+	}
+};
+
+// 符号表
 struct Symbols{
 	int id;
 	static int count;

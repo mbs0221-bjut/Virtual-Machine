@@ -36,6 +36,7 @@ private:
 		printf("[%d] %s undeclared.\n", lexer->line, ((Word*)s)->word.c_str());
 		return nullptr;
 	}
+protected:
 	// 外部结构
 	void node(){
 		while (s->kind == BASIC){
@@ -119,6 +120,7 @@ private:
 		case CASE:st = stmt_case(); break;
 		case BREAK:st = stmt_break(); break;
 		case CONTINUE:st = stmt_continue(); break;
+		case TRY:st = stmt_try(); break;
 		case ';':match(';'); break;
 		case '{':st = stmts(); break;
 		default:match(s->kind); break;
@@ -144,6 +146,7 @@ private:
 		symbols = symbols->prev;
 		return sts;
 	}
+	// 定义
 	Stmt* stmt_decl(){
 		Decl *d = new Decl;
 		d->line = lexer->line;
@@ -159,6 +162,7 @@ private:
 		match(';');
 		return d;
 	}
+	// 赋值
 	Stmt* stmt_assign(){
 		Assign *a = new Assign;
 		a->line = lexer->line;
@@ -168,6 +172,7 @@ private:
 		a->E2 = expr_expr();
 		return a;
 	}
+	// 条件语句
 	Stmt* stmt_if(){
 		If *i = new If;
 		i->line = lexer->line;
@@ -187,6 +192,7 @@ private:
 		}
 		return i;
 	}
+	// 循环语句
 	Stmt* stmt_while(){
 		While *w = new While;
 		w->line = lexer->line;
@@ -235,6 +241,7 @@ private:
 		Break::cur.pop();
 		return f;
 	}
+	// 分支语句
 	Stmt* stmt_case(){
 		Case *c = new Case;
 		c->line = lexer->line;
@@ -263,6 +270,20 @@ private:
 		match(';');
 		return st;
 	}
+	// 异常处理
+	Stmt* stmt_throw() {
+		match(THROW);
+	}
+	Stmt* stmt_try() {
+		TryCatch *st = new TryCatch();
+		match(TRY);
+		st->pTry = stmt();
+		match(CATCH);
+		st->pCatch = stmt();
+		match(FINALLY);
+		st->pFinnaly = stmt();
+	}
+	// 表达式语句
 	Cond* expr_cond()
 	{
 		Expr* e = expr_expr();
@@ -327,6 +348,7 @@ private:
 		}
 		return e;
 	}
+	// 函数调用
 	Expr* expr_call(){
 		Call *c = new Call;
 		c->line = lexer->line;
