@@ -74,11 +74,11 @@ struct Cond :Expr{
 		E2->code(fp);
 		fprintf(fp, "\t%c $%d $%d $%d\n", opt, E1->label, E2->label, label);
 		switch (opt){
-		case '>':fprintf(fp, "\tjg L%d\n", True); break;
-		case '=':fprintf(fp, "\tje L%d\n", True); break;
-		case '<':fprintf(fp, "\tjb L%d\n", True); break;
-		case '!':fprintf(fp, "\tjne L%d\n", True); break;
-		default:fprintf(fp, "\tjmp L%d\n", True); break;
+		case '>':fprintf(fp, "\tgt L%d\n", True); break;
+		case '=':fprintf(fp, "\teq L%d\n", True); break;
+		case '<':fprintf(fp, "\tlt L%d\n", True); break;
+		case '!':fprintf(fp, "\tneq L%d\n", True); break;
+		default: fprintf(fp, "\ttmp L%d\n", True); break;
 		}
 		fprintf(fp, "\tjmp L%d\n", False);
 	}
@@ -132,7 +132,7 @@ struct Id :Expr{
 	}
 };
 
-struct Number :Expr{
+struct Number : Expr{
 	Integer *s;
 	Number(Integer *s) :Expr('@'), s(s){  }
 	virtual void code(FILE *fp){

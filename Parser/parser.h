@@ -282,6 +282,7 @@ protected:
 		st->pCatch = stmt();
 		match(FINALLY);
 		st->pFinnaly = stmt();
+		return st;
 	}
 	// ±í´ïÊ½Óï¾ä
 	Cond* expr_cond()

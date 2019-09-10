@@ -110,6 +110,9 @@ public:
 		words["continue"] = new Word(CONTINUE, "continue");
 		words["end"] = new Word(END, "end");
 		words["try"] = new Word(TRY, "try");
+		words["catch"] = new Word(CATCH, "catch");
+		words["finally"] = new Word(FINALLY, "finally");
+		words["throw"] = new Word(THROW, "throw");
 		inf.open(fp, ios::in);
 	}
 	~Lexer(){
