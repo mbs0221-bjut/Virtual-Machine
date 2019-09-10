@@ -3,8 +3,8 @@
 void main()
 {
 	char a;
-	FILE fp;
-	FILE *fp = &fp;
+	FILE file;
+	FILE *fp = &file;
 	// 虚拟机执行
 	printf("虚拟机执行\n");
 	CPU CPU;

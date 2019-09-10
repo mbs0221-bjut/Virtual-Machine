@@ -17,7 +17,7 @@ private:
 			return true;
 		}
 		s = lexer->scan();
-		printf("%s not matched.\n", kind);
+		printf("%d not matched.\n", kind);
 		return false;
 	}
 	void putId(Id *id){
