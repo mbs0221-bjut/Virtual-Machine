@@ -4,9 +4,9 @@ void main(){
 	char a;
 	FILE file;
 	FILE *fp = &file;
-	Parser *p = new Parser("Text.txt");
+	Parser *p = new Parser();
 	printf("开始语法分析\n");
-	Node *st = p->parse();
+	Node *st = p->parse("Text.txt");
 	printf("语法分析结束\n");
 	printf("编译开始\n");
 	printf(" line  stmt\n");

@@ -38,22 +38,43 @@ private:
 		return nullptr;
 	}
 	void init_precedence() {
-		precedence["*"] = 3; // term
+		precedence["[]"] = 1; // level 1
+		precedence["()"] = 1;
+		precedence["->"] = 1;
+		precedence["."] = 1;
+
+		precedence["!"] = 2; // level 2
+		precedence["~"] = 2;
+		precedence["++"] = 2;
+		precedence["--"] = 2;
+		precedence["-"] = 2;
+		//precedence["(T)"] = 2;
+		//precedence["*"] = 2;
+		//precedence["&"] = 2;
+		precedence["sizeof"] = 2;
+
+		precedence["*"] = 3; // level 3
 		precedence["/"] = 3;
 		precedence["%"] = 3;
-		precedence["+"] = 4; // expr
+
+		precedence["+"] = 4; // level 4
 		precedence["-"] = 4;
-		precedence["<<"] = 5; // shift
+
+		precedence["<<"] = 5; // level 5
 		precedence[">>"] = 5;
-		precedence["<"] = 6; // rel
+
+		precedence["<"] = 6; // level 6
 		precedence["<="] = 6;
 		precedence[">="] = 6;
 		precedence[">"] = 6;
-		precedence["=="] = 7; // rel
+
+		precedence["=="] = 7; // level 7
 		precedence["!="] = 7;
-		precedence["&"] = 8; // bitop
-		precedence["^"] = 9;
+
+		precedence["&"] = 8; // bit logic
+		precedence["~"] = 3;
 		precedence["|"] = 10;
+
 		precedence["&&"] = 11; // logical
 		precedence["||"] = 12;
 	}
@@ -311,50 +332,17 @@ protected:
 	BinaryExpr* expr_binary() {
 		Expr* pL = expr_binary();
 		while (s->kind) {
-			if (compare(s->kind, pL->opt)) {
+			Word* w = (Word*)s;
+			if (compare(w->word, pL->opt)) {
 				Expr* pR = expr_binary();
 			}
-			pL = new BinaryExpr(opt, pL, pR);
+			pL = new BinaryExpr(w->word, pL, pR);
 		}
 		return pL;
 	}
 	UnaryExpr* expr_unary() {
 		match('-');
 	}
-	//Cond* expr_cond()
-	//{
-	//	Expr* e = expr_expr();
-	//	if (s->kind == '<' || s->kind == '>' || s->kind == '=' || s->kind == '!'){
-	//		char opt = s->kind;
-	//		match(s->kind);
-	//		Expr *r = expr_expr();
-	//		return new Cond(opt, e, r);
-	//	}
-	//	return nullptr;
-	//}
-	//Expr* expr_expr()
-	//{
-	//	Expr* e = expr_term();
-	//	while (s->kind == '+' || s->kind == '-'){
-	//		char opt = s->kind;
-	//		match(s->kind);
-	//		Expr *r = expr_term();
-	//		e = new Arith(opt, e, r);
-	//	}
-	//	return e;
-	//}
-	//Expr* expr_term()
-	//{
-	//	Expr* e = expr_unary();
-	//	while (s->kind == '*' || s->kind == '/' || s->kind == '%')
-	//	{
-	//		string opt(s->kind);
-	//		match(s->kind);
-	//		Expr *r = expr_unary();
-	//		e = new Arith(opt, e, r);
-	//	}
-	//	return e;
-	//}
 	UnaryExpr* expr_unary(){
 		Expr *u;
 		if (s->kind == '~'){
@@ -402,9 +390,9 @@ protected:
 		return c;
 	}
 public:
-	Parser(string fp){
+	Parser(){
 		init_precedence();
-		lexer = new Lexer(fp);
+		lexer = new Lexer();
 		symbols = new Symbols();
 		globol = new Global();
 	}
@@ -415,7 +403,8 @@ public:
 		delete symbols;
 		delete globol;
 	}
-	Node* parse(){
+	Node* parse(char *filename){
+		lexer->open(filename);
 		s = lexer->scan();// 预读一个词法单元，以便启动语法分析
 		node();
 		return globol;

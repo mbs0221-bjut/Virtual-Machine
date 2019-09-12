@@ -53,10 +53,9 @@ struct Stmts :Stmt{
 
 //表达式
 struct Expr :Stmt{
-	string opt;
 	int label;
 	static int count;
-	Expr(string opt) :opt(opt){ label = count++; }
+	Expr() { label = count++; }
 	virtual void code(FILE *fp){
 		Node::code(fp);
 	}
@@ -66,61 +65,22 @@ int Expr::count = 0;
 
 // 双目表达式
 struct BinaryExpr : Expr {
+	Word opt;
 	Expr *pL, *pR;
-	BinaryExpr(string opt, Expr *pL, Expr *pR) : Expr(opt), pL(pL), pR(pR) { ; }
+	BinaryExpr(Word &opt, Expr *pL, Expr *pR) : opt(opt), pL(pL), pR(pR) { ; }
 	virtual void code(FILE *fp) override {
 		Expr::code(fp);
 		pL->code(fp);
 		pR->code(fp);
-		fprintf(fp, "\t%c $%d $%d $%d\n", opt, pL->label, pR->label, label);
-	}
-};
-
-// 条件表达式
-struct Cond : Expr{
-	int True, False;
-	Expr *E1, *E2;
-	Cond(string opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
-	virtual void code(FILE *fp){
-		Expr::code(fp);
-		E1->code(fp);
-		E2->code(fp);
-		fprintf(fp, "\t%c $%d $%d $%d\n", opt, E1->label, E2->label, label);
-		//switch (opt){
-		//case '>':fprintf(fp, "\tgt L%d\n", True); break;
-		//case '=':fprintf(fp, "\teq L%d\n", True); break;
-		//case '<':fprintf(fp, "\tlt L%d\n", True); break;
-		//case '!':fprintf(fp, "\tneq L%d\n", True); break;
-		//default: fprintf(fp, "\ttmp L%d\n", True); break;
-		//}
-		fprintf(fp, "\tjmp L%d\n", False);
-	}
-};
-
-// 算术表达式
-struct Arith :Expr{
-	Expr *E1, *E2;
-	Arith(string opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
-	virtual void code(FILE *fp){
-		Expr::code(fp);
-		E1->code(fp);
-		E2->code(fp);
-		//switch (opt){
-		//case '+':fprintf(fp, "\tadd "); break;
-		//case '-':fprintf(fp, "\tsub "); break;
-		//case '*':fprintf(fp, "\tmul "); break;
-		//case '/':fprintf(fp, "\tdiv "); break;
-		//case '&':fprintf(fp, "\tand "); break;
-		//default:break;
-		//}
-		fprintf(fp, "$%d $%d $%d\n", E1->label, E2->label, label);
+		fprintf(fp, "\t%c $%d $%d $%d\n", opt.word.c_str(), pL->label, pR->label, label);
 	}
 };
 
 // 单目表达式
 struct UnaryExpr :Expr{
+	Word opt;
 	Expr *E1;
-	UnaryExpr(string opt, Expr *E1) :Expr(opt), E1(E1){  }
+	UnaryExpr(Word &opt, Expr *E1) :opt(opt), E1(E1){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		E1->code(fp);
@@ -130,25 +90,29 @@ struct UnaryExpr :Expr{
 
 // ID
 struct Id :Expr{
-	Type *t;
-	Word *s;
+	Type *type;
+	Word *name;
 	int offset;
 	bool global;
-	Id(Type *t, Word *s) :Expr("@"), t(t), s(s){  }
+public:
+	Id(Type *type, Word *name) : type(type), name(name){  }
+	const char* getName() { return name->word.c_str(); }
+	const char* getTypeName() { return type->word.c_str(); }
+	int getWidth() { return type->width; }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
-		char width = t == Type::Int ? 'w' : 'b';
+		char *width = type == Type::Int ? "dw" : "b";
 		if (global){
-			fprintf(fp, "\tload%c $%d %s\n", width, label, s->word.c_str());
+			fprintf(fp, "\tload%s $%d %s\n", width, label, name->getName());
 		}else{
-			fprintf(fp, "\tload%c $%d %s\n", width, label, s->word.c_str());
+			fprintf(fp, "\tload%s $%d %s\n", width, label, name->getName());
 		}
 	}
 };
 
-struct Number : Expr{
+struct Constant : Expr{
 	Integer *s;
-	Number(Integer *s) :Expr("@"), s(s){  }
+	Constant(Integer *s) : s(s){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		char width = s->value > 256 ? 'w' : 'b';
@@ -161,14 +125,14 @@ struct Decl :Stmt{
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("data\n");
-		//fprintf(fp, "\tdata\n");
-		//list<Id*>::iterator iter;
-		//for (iter = ids.begin(); iter != ids.end(); iter++){
-		//	printf("\t$%s [%d]\n", (*iter)->s->word.c_str(), (*iter)->t->width);
-		//	fprintf(fp, "\t\t$%s [%d]\n", (*iter)->s->word.c_str(), (*iter)->t->width);
-		//}
-		//printf("data\n");
-		//fprintf(fp, "\tdata\n");
+		fprintf(fp, "\tdata\n");
+		list<Id*>::iterator iter;
+		for (iter = ids.begin(); iter != ids.end(); iter++){
+			printf("\t$%s [%d]\n", (*iter)->getName(), (*iter)->getWidth());
+			fprintf(fp, "\t\t$%s [%d]\n", (*iter)->getName(), (*iter)->getWidth());
+		}
+		printf("data\n");
+		fprintf(fp, "\tdata\n");
 	}
 };
 
@@ -180,65 +144,63 @@ struct Assign :Stmt{
 		printf("assign\n");
 		E2->code(fp);
 		if (E1->global){
-			fprintf(fp, "\tstore %s $%d\n", E1->s->word.c_str(), E2->label);
+			fprintf(fp, "\tstore %s $%d\n", E1->getName(), E2->label);
 		}else{
-			fprintf(fp, "\tstore %s $%d\n", E1->s->word.c_str(), E2->label);
+			fprintf(fp, "\tstore %s $%d\n", E1->getName(), E2->label);
 		}
 	}
 };
 
 struct If :Stmt{
-	Cond *C;
+	Expr *C;
 	Stmt *S1;
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("if\n");
 		next = newlabel();
-		C->True = newlabel();
-		C->False = next;
 		S1->next = next;
+		// 计算表达式
 		C->code(fp);
-		fprintf(fp, "L%d:\n", C->True);
+		// 为False跳转
+		fprintf(fp, "jz L%d", next);// False跳转
 		S1->code(fp);
 		fprintf(fp, "L%d:\n", next);
 	}
 };
 
-struct Else :Stmt{
-	Cond *C;
+struct IfElse :Stmt{
+	Expr *C;
 	Stmt *S1;
 	Stmt *S2;
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("if-else\n");
-		next = newlabel();
-		C->True = newlabel();
-		C->False = newlabel();
-		S1->next = next;
+		S1->next = newlabel();
+		S2->next = newlabel();
+		// 计算表达式
 		C->code(fp);
-		fprintf(fp, "L%d:\n", C->True);
+		// 为False跳转
+		fprintf(fp, "jz L%d:\n", next);// False跳转
 		S1->code(fp);
 		fprintf(fp, "\tjmp L%d\n", next);
-		fprintf(fp, "L%d:\n", C->False);
-		S2->code(fp);
 		fprintf(fp, "L%d:\n", next);
+		S2->code(fp);
+		fprintf(fp, "L%d:\n", S1->next);
 	}
 };
 
 struct While :Stmt{
-	Cond *C;
+	Expr *C;
 	Stmt *S1;
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("while\n");
 		begin = newlabel();
 		next = newlabel();
-		C->True = newlabel();
-		C->False = next;
 		S1->next = begin;
 		fprintf(fp, "L%d:\n", begin);
 		C->code(fp);
-		fprintf(fp, "L%d:\n", C->True);
+		fprintf(fp, "jz L:\n", next);// False跳转
 		S1->code(fp);
 		fprintf(fp, "\tjmp L%d\n", begin);
 		fprintf(fp, "L%d:\n", next);
@@ -246,26 +208,23 @@ struct While :Stmt{
 };
 
 struct Do :Stmt{
-	Cond *C;
+	Expr *C;
 	Stmt *S1;
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("do-while\n");
 		begin = newlabel();
-		next = newlabel();
-		C->True = begin;
-		C->False = next;
 		S1->next = begin;
 		fprintf(fp, "L%d:\n", begin);
 		S1->code(fp);
 		C->code(fp);
-		fprintf(fp, "L%d:\n", next);
+		fprintf(fp, "jnz L%d:\n", begin);// True跳转
 	}
 };
 
 struct For :Stmt{
 	Stmt *S1;
-	Cond *C;
+	Expr *C;
 	Stmt *S2;
 	Stmt *S3;
 	virtual void code(FILE *fp){
@@ -273,15 +232,13 @@ struct For :Stmt{
 		printf("for\n");
 		begin = newlabel();
 		next = newlabel();
-		C->True = newlabel();
-		C->False = next;
 		S2->begin = newlabel();
 		S2->next = newlabel();
 		S3->next = begin;
 		S1->code(fp);
 		fprintf(fp, "L%d:\n", begin);
 		C->code(fp);
-		fprintf(fp, "L%d:\n", C->True);
+		fprintf(fp, "L%d:\n", C->True); // False跳转
 		S3->code(fp);
 		fprintf(fp, "L%d:\n", S2->begin);
 		S2->code(fp);
@@ -408,8 +365,8 @@ struct Function : Word{
 		for (iter = params->ids.begin(); iter != params->ids.end(); iter++){
 			(*iter)->offset = width;
 			(*iter)->global = false;
-			fprintf(fp, "\t;%s @%d\n", (*iter)->s->word.c_str(), width);
-			width += (*iter)->t->width;
+			fprintf(fp, "\t;%s @%d\n", (*iter)->getName(), width);
+			width += (*iter)->getWidth();
 		}
 		width = 0;
 		Symbols *table = symbols;
@@ -417,8 +374,8 @@ struct Function : Word{
 			for (iter = table->ids.begin(); iter != table->ids.end(); iter++){
 				(*iter)->offset = width;
 				(*iter)->global = false;
-				fprintf(fp, "\t;%s @%d\n", (*iter)->s->word.c_str(), width);
-				width += (*iter)->t->width;
+				fprintf(fp, "\t;%s @%d\n", (*iter)->getName(), width);
+				width += (*iter)->getWidth();
 			}
 		}
 		fprintf(fp, "\tsub $sp %d\n", width);
@@ -427,7 +384,7 @@ struct Function : Word{
 			for (iter = table->ids.begin(); iter != table->ids.end(); iter++){
 				(*iter)->offset = width;
 				(*iter)->global = false;
-				width += (*iter)->t->width;
+				width += (*iter)->getWidth();
 			}
 		}
 		body->code(fp);
@@ -438,7 +395,7 @@ struct Function : Word{
 struct Call :Expr{
 	list<Expr*> args;
 	Function *func;
-	Call() :Expr("@"){ args.clear(); }
+	Call() { args.clear(); }
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("call\n");
@@ -469,8 +426,8 @@ struct Global :Node{
 			for (iter = ids.begin(); iter != ids.end(); iter++){
 				(*iter)->offset = width;
 				(*iter)->global = true;
-				fprintf(fp, "\t%s %s\n", (*iter)->t->word.c_str(), (*iter)->s->word.c_str());
-				width += (*iter)->t->width;
+				fprintf(fp, "\t%s %s\n", (*iter)->getTypeName(), (*iter)->getName());
+				width += (*iter)->getWidth();
 			}
 		}
 		fprintf(fp, ".stack\n");
