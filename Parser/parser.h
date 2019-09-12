@@ -22,6 +22,7 @@ private:
 		printf("%s not matched.\n", kind);
 		return false;
 	}
+	map<string, int> precedence;
 	// 符号表管理
 	Id* getId(){
 		list<Id*>::iterator iter;
@@ -35,6 +36,29 @@ private:
 		}
 		printf("[%d] %s undeclared.\n", lexer->line, ((Word*)s)->word.c_str());
 		return nullptr;
+	}
+	void init_precedence() {
+		precedence["*"] = 3; // term
+		precedence["/"] = 3;
+		precedence["%"] = 3;
+		precedence["+"] = 4; // expr
+		precedence["-"] = 4;
+		precedence["<<"] = 5; // shift
+		precedence[">>"] = 5;
+		precedence["<"] = 6; // rel
+		precedence["<="] = 6;
+		precedence[">="] = 6;
+		precedence[">"] = 6;
+		precedence["=="] = 7; // rel
+		precedence["!="] = 7;
+		precedence["&"] = 8; // bitop
+		precedence["^"] = 9;
+		precedence["|"] = 10;
+		precedence["&&"] = 11; // logical
+		precedence["||"] = 12;
+	}
+	bool compare(string &opa, string &opb) {
+		return precedence[opa] > precedence[opb];
 	}
 protected:
 	// 外部结构
@@ -275,55 +299,67 @@ protected:
 		match(THROW);
 	}
 	Stmt* stmt_try() {
-		TryCatch *st = new TryCatch();
 		match(TRY);
-		st->pTry = stmt();
+		Stmt* pTry = stmt();
 		match(CATCH);
-		st->pCatch = stmt();
+		Stmt* pCatch = stmt();
 		match(FINALLY);
-		st->pFinnaly = stmt();
-		return st;
+		Stmt* pFinnaly = stmt();
+		return new TryCatch(pTry, pCatch, pFinnaly);
 	}
 	// 表达式语句
-	Cond* expr_cond()
-	{
-		Expr* e = expr_expr();
-		if (s->kind == '<' || s->kind == '>' || s->kind == '=' || s->kind == '!'){
-			char opt = s->kind;
-			match(s->kind);
-			Expr *r = expr_expr();
-			return new Cond(opt, e, r);
+	BinaryExpr* expr_binary() {
+		Expr* pL = expr_binary();
+		while (s->kind) {
+			if (compare(s->kind, pL->opt)) {
+				Expr* pR = expr_binary();
+			}
+			pL = new BinaryExpr(opt, pL, pR);
 		}
-		return nullptr;
+		return pL;
 	}
-	Expr* expr_expr()
-	{
-		Expr* e = expr_term();
-		while (s->kind == '+' || s->kind == '-'){
-			char opt = s->kind;
-			match(s->kind);
-			Expr *r = expr_term();
-			e = new Arith(opt, e, r);
-		}
-		return e;
+	UnaryExpr* expr_unary() {
+		match('-');
 	}
-	Expr* expr_term()
-	{
-		Expr* e = expr_unary();
-		while (s->kind == '*' || s->kind == '/' || s->kind == '%')
-		{
-			char opt = s->kind;
-			match(s->kind);
-			Expr *r = expr_unary();
-			e = new Arith(opt, e, r);
-		}
-		return e;
-	}
-	Expr* expr_unary(){
+	//Cond* expr_cond()
+	//{
+	//	Expr* e = expr_expr();
+	//	if (s->kind == '<' || s->kind == '>' || s->kind == '=' || s->kind == '!'){
+	//		char opt = s->kind;
+	//		match(s->kind);
+	//		Expr *r = expr_expr();
+	//		return new Cond(opt, e, r);
+	//	}
+	//	return nullptr;
+	//}
+	//Expr* expr_expr()
+	//{
+	//	Expr* e = expr_term();
+	//	while (s->kind == '+' || s->kind == '-'){
+	//		char opt = s->kind;
+	//		match(s->kind);
+	//		Expr *r = expr_term();
+	//		e = new Arith(opt, e, r);
+	//	}
+	//	return e;
+	//}
+	//Expr* expr_term()
+	//{
+	//	Expr* e = expr_unary();
+	//	while (s->kind == '*' || s->kind == '/' || s->kind == '%')
+	//	{
+	//		string opt(s->kind);
+	//		match(s->kind);
+	//		Expr *r = expr_unary();
+	//		e = new Arith(opt, e, r);
+	//	}
+	//	return e;
+	//}
+	UnaryExpr* expr_unary(){
 		Expr *u;
 		if (s->kind == '~'){
 			match('~');
-			u = new Unary('~', expr_unary());
+			u = new UnaryExpr("~", expr_unary());
 		}
 		else{
 			u = expr_factor();
@@ -334,7 +370,7 @@ protected:
 	{
 		Expr* e = nullptr;
 		switch (s->kind){
-		case '(': match('('); e = expr_expr(); match(')'); break;
+		case '(': match('('); e = expr_binary(); match(')'); break;
 		case ID: 			
 		{
 				   switch (getId()->s->kind){
@@ -358,7 +394,7 @@ protected:
 		// 函数调用
 		match('(');
 		while (s->kind == ID || s->kind == NUM){
-			Expr *e = expr_expr();
+			Expr *e = expr_binary();
 			if (e)c->args.push_back(e);
 			if (s->kind == ',') match(',');
 		}
@@ -367,12 +403,14 @@ protected:
 	}
 public:
 	Parser(string fp){
+		init_precedence();
 		lexer = new Lexer(fp);
 		symbols = new Symbols();
 		globol = new Global();
 	}
 	~Parser(){
 		printf("~Parser\n");
+		precedence.clear();
 		delete lexer;
 		delete symbols;
 		delete globol;

@@ -8,6 +8,7 @@
 
 struct Node{
 	virtual void code(FILE *fp){
+
 	}
 };
 
@@ -52,10 +53,10 @@ struct Stmts :Stmt{
 
 //表达式
 struct Expr :Stmt{
-	char opt;
+	string opt;
 	int label;
 	static int count;
-	Expr(char opt) :opt(opt){ label = count++; }
+	Expr(string opt) :opt(opt){ label = count++; }
 	virtual void code(FILE *fp){
 		Node::code(fp);
 	}
@@ -63,23 +64,35 @@ struct Expr :Stmt{
 
 int Expr::count = 0;
 
+// 双目表达式
+struct BinaryExpr : Expr {
+	Expr *pL, *pR;
+	BinaryExpr(string opt, Expr *pL, Expr *pR) : Expr(opt), pL(pL), pR(pR) { ; }
+	virtual void code(FILE *fp) override {
+		Expr::code(fp);
+		pL->code(fp);
+		pR->code(fp);
+		fprintf(fp, "\t%c $%d $%d $%d\n", opt, pL->label, pR->label, label);
+	}
+};
+
 // 条件表达式
-struct Cond :Expr{
+struct Cond : Expr{
 	int True, False;
 	Expr *E1, *E2;
-	Cond(char opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
+	Cond(string opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		E1->code(fp);
 		E2->code(fp);
 		fprintf(fp, "\t%c $%d $%d $%d\n", opt, E1->label, E2->label, label);
-		switch (opt){
-		case '>':fprintf(fp, "\tgt L%d\n", True); break;
-		case '=':fprintf(fp, "\teq L%d\n", True); break;
-		case '<':fprintf(fp, "\tlt L%d\n", True); break;
-		case '!':fprintf(fp, "\tneq L%d\n", True); break;
-		default: fprintf(fp, "\ttmp L%d\n", True); break;
-		}
+		//switch (opt){
+		//case '>':fprintf(fp, "\tgt L%d\n", True); break;
+		//case '=':fprintf(fp, "\teq L%d\n", True); break;
+		//case '<':fprintf(fp, "\tlt L%d\n", True); break;
+		//case '!':fprintf(fp, "\tneq L%d\n", True); break;
+		//default: fprintf(fp, "\ttmp L%d\n", True); break;
+		//}
 		fprintf(fp, "\tjmp L%d\n", False);
 	}
 };
@@ -87,26 +100,27 @@ struct Cond :Expr{
 // 算术表达式
 struct Arith :Expr{
 	Expr *E1, *E2;
-	Arith(char opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
+	Arith(string opt, Expr *E1, Expr *E2) :Expr(opt), E1(E1), E2(E2){}
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		E1->code(fp);
 		E2->code(fp);
-		switch (opt){
-		case '+':fprintf(fp, "\tadd "); break;
-		case '-':fprintf(fp, "\tsub "); break;
-		case '*':fprintf(fp, "\tmul "); break;
-		case '/':fprintf(fp, "\tdiv "); break;
-		case '&':fprintf(fp, "\tand "); break;
-		default:break;
-		}
+		//switch (opt){
+		//case '+':fprintf(fp, "\tadd "); break;
+		//case '-':fprintf(fp, "\tsub "); break;
+		//case '*':fprintf(fp, "\tmul "); break;
+		//case '/':fprintf(fp, "\tdiv "); break;
+		//case '&':fprintf(fp, "\tand "); break;
+		//default:break;
+		//}
 		fprintf(fp, "$%d $%d $%d\n", E1->label, E2->label, label);
 	}
 };
 
-struct Unary :Expr{
+// 单目表达式
+struct UnaryExpr :Expr{
 	Expr *E1;
-	Unary(char opt, Expr *E1) :Expr(opt), E1(E1){  }
+	UnaryExpr(string opt, Expr *E1) :Expr(opt), E1(E1){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		E1->code(fp);
@@ -120,7 +134,7 @@ struct Id :Expr{
 	Word *s;
 	int offset;
 	bool global;
-	Id(Type *t, Word *s) :Expr('@'), t(t), s(s){  }
+	Id(Type *t, Word *s) :Expr("@"), t(t), s(s){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		char width = t == Type::Int ? 'w' : 'b';
@@ -134,7 +148,7 @@ struct Id :Expr{
 
 struct Number : Expr{
 	Integer *s;
-	Number(Integer *s) :Expr('@'), s(s){  }
+	Number(Integer *s) :Expr("@"), s(s){  }
 	virtual void code(FILE *fp){
 		Expr::code(fp);
 		char width = s->value > 256 ? 'w' : 'b';
@@ -342,10 +356,11 @@ struct Throw : Stmt {
 };
 
 struct TryCatch : Stmt{
-	Stmt *pTry, *pCatch, *pFinnaly;
+	Stmt *pTry, *pCatch, *pFinally;
 	TryCatch() {
-		pTry = pCatch = pFinnaly = nullptr;
+		pTry = pCatch = pFinally = nullptr;
 	}
+	TryCatch(Stmt* pTry, Stmt* pCatch, Stmt* pFinally) :pTry(pTry), pCatch(pCatch), pFinally(pFinally) {  }
 	virtual void code(FILE *fp) {
 		Stmt::code(fp);
 		// 需要异常处理的程序
@@ -356,7 +371,7 @@ struct TryCatch : Stmt{
 		pCatch->code(fp);
 		fprintf(fp, "L%d:\n", pCatch->next);
 		// 扫尾操作
-		pFinnaly->code(fp);
+		pFinally->code(fp);
 	}
 };
 
@@ -423,7 +438,7 @@ struct Function : Word{
 struct Call :Expr{
 	list<Expr*> args;
 	Function *func;
-	Call() :Expr('@'){ args.clear(); }
+	Call() :Expr("@"){ args.clear(); }
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("call\n");

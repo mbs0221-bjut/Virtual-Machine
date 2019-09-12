@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include <map>
+#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -14,9 +15,17 @@ using namespace std;
 
 enum Tag{
 	IF = 256, THEN, ELSE, DO, WHILE, FOR, CASE, BREAK, CONTINUE, TRY, CATCH, FINALLY, THROW,
-	BASIC, INT, CHAR, 
+	BASIC, INT, CHAR,
 	END,
-	ID, NUM, FUNCTION
+	ID, NUM, FUNCTION,
+	AND, OR, NOT, // LOGIC
+	BIT_AND, BIT_OR, BIT_NOT, // BIT LOGIC
+	EQ, NEQ, // REL
+	LT, LEQ, GEQ, GT, // REL
+	SHL, SHR, // SHIFT
+	ADD, SUB, // TERM
+	MUL, DIV, // FACTOR
+	INC, DEC // UNARY
 };
 
 // 词法单元
@@ -31,14 +40,13 @@ struct Token{
 	virtual string code(){
 		ostringstream s;
 		char *keywords[] = { 
-			"IF", "THEN", "ELSE", 
-			"DO", "WHILE", "FOR", 
+			"IF", "THEN", "ELSE", "DO", "WHILE", "FOR", 
 			"CASE", "BREAK", "CONTINUE", 
 			"TRY", "CATCH", "FINALLY", "THROW",
 			"ID", "BASIC", "INT", "CHAR", "END"
 		};
 		if (kind >=IF && kind <= END)
-			s << keywords[kind];
+			s << keywords[kind - IF];
 		else
 			s << (char)kind;
 		return s.str();
@@ -120,6 +128,57 @@ public:
 		words.clear();
 		printf("~Lexer\n");
 	}
+	Integer* match_integer(char ch) {
+		int value = 0;
+		if (ch == '0') {
+			inf.read(&ch, sizeof(ch));
+			if (ch == 'x' || ch == 'X') {
+				inf.read(&ch, sizeof(ch));
+				if (isdigit(ch) || (ch >= 'a'&&ch <= 'f') || (ch >= 'A'&&ch <= 'F')) {
+					do {
+						if (isalpha(ch)) {
+							value = 16 * value + ch - 'A' + 10;
+						}
+						else {
+							value = 16 * value + ch - '0';
+						}
+						inf.read(&ch, sizeof(ch));
+					} while (isdigit(ch) || (ch >= 'a'&&ch <= 'f') || (ch >= 'A'&&ch <= 'F'));
+					inf.seekg(-1, ios::cur);
+					return new Integer(NUM, value);
+				}
+				else {
+					printf("错误的十六进制!");
+				}
+			}
+			else if (ch >= '0'&&ch <= '7') {
+				//八进制整数
+				do {
+					value = 8 * value + ch - '0';
+					inf.read(&ch, sizeof(ch));
+				} while (ch >= '0'&&ch <= '7');
+				inf.seekg(-1, ios::cur);
+				return new Integer(NUM, value);
+			}
+			else {
+				//十进制整数0
+				inf.seekg(-1, ios::cur);
+				return new Integer(NUM, 0);
+			}
+		}
+		else {
+			//除0外十进制整数,5状态
+			do {
+				value = 10 * value + ch - '0';
+				inf.read(&ch, sizeof(ch));
+			} while (isdigit(ch));
+			inf.seekg(-1, ios::cur);//回退一个字符
+			return new Integer(NUM, value);
+		}
+	}
+	void match_operator(char ch) {
+
+	}
 	Token *scan()
 	{
 		int i = 0;
@@ -136,7 +195,7 @@ public:
 			do{
 				str.push_back(ch);
 				inf.read(&ch, sizeof(ch));
-			} while (isalnum(ch));  //1状态
+			} while (isalnum(ch) || ch == '_');  //1状态
 			inf.seekg(-1, ios::cur);//回退一个字符
 			if (words.find(str) == words.end()){
 				return new Word(ID, str);
@@ -144,53 +203,9 @@ public:
 			return words[str];
 		}
 		if (isdigit(ch)){
-			int value = 0;
-			if (ch == '0'){
-				inf.read(&ch, sizeof(ch));
-				if (ch == 'x' || ch == 'X'){
-					inf.read(&ch, sizeof(ch));
-					if (isdigit(ch) || (ch >= 'a'&&ch <= 'f') || (ch >= 'A'&&ch <= 'F')){
-						do{
-							if (isalpha(ch)){
-								value = 16 * value + ch - 'A' + 10;
-							}
-							else{
-								value = 16 * value + ch - '0';
-							}
-							inf.read(&ch, sizeof(ch));
-						} while (isdigit(ch) || (ch >= 'a'&&ch <= 'f') || (ch >= 'A'&&ch <= 'F'));
-						inf.seekg(-1, ios::cur);
-						return new Integer(NUM, value);
-					}
-					else{
-						printf("错误的十六进制!");
-					}
-				}
-				else if (ch >= '0'&&ch <= '7'){
-					//八进制整数
-					do{
-						value = 8 * value + ch - '0';
-						inf.read(&ch, sizeof(ch));
-					} while (ch >= '0'&&ch <= '7');
-					inf.seekg(-1, ios::cur);
-					return new Integer(NUM, value);
-				}
-				else{
-					//十进制整数0
-					inf.seekg(-1, ios::cur);
-					return new Integer(NUM, 0);
-				}
-			}
-			else{
-				//除0外十进制整数,5状态
-				do{
-					value = 10 * value + ch - '0';
-					inf.read(&ch, sizeof(ch));
-				} while (isdigit(ch));
-				inf.seekg(-1, ios::cur);//回退一个字符
-				return new Integer(NUM, value);
-			}
+			return match_integer(ch);
 		}
+		
 		return new Token(ch);
 	}
 };
