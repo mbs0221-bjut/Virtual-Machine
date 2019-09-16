@@ -1,6 +1,6 @@
-# Parser-Asm-VM
+# Virtual-Machine
 
-编译环境：VS2013，C++11
+编译环境：VS2015，C++11
 
 一个编译程序，一个汇编程序和一个简单的16位虚拟机
 
@@ -17,3 +17,8 @@ TODO：
   在Asm中实现过程定义和调用指令，类似汇编，需要实现参数传递，方便Parser实现函数调用
   在Parser中实现带参函数调用，实现Break，Continue指令等，函数调用是重点
   因为未实现寄存器分配算法，所以最多用到256个局部和临时变量，亟待实现寄存器分配
+
+
+# branch VM-1.2
+Virtual-Machine 1.2
+编译器支持双目和单目运算，for, do-while, while, case语句，支持break和continue，添加了函数定义和调用。
