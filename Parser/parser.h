@@ -211,10 +211,10 @@ protected:
 	Stmt* stmt_assign(){
 		Assign *a = new Assign;
 		a->line = lexer->line;
-		a->E1 = getId();
+		a->id = getId();
 		match(ID);
 		match('=');
-		a->E2 = expr_expr();
+		a->expr = expr_expr();
 		return a;
 	}
 	// 条件语句
@@ -223,15 +223,15 @@ protected:
 		i->line = lexer->line;
 		match(IF);
 		match('(');
-		i->C = expr_cond();
+		i->cond = expr_cond();
 		match(')');
-		i->S1 = stmt();
+		i->body = stmt();
 		if (s->kind == ELSE){
 			Else *e = new Else;
 			match(ELSE);
 			e->line = i->line;
-			e->C = i->C;
-			e->S1 = i->S1;
+			e->C = i->cond;
+			e->S1 = i->body;
 			e->S2 = stmt();
 			return e;
 		}
@@ -243,11 +243,11 @@ protected:
 		w->line = lexer->line;
 		match(WHILE);
 		match('(');
-		w->C = expr_cond();
+		w->cond = expr_cond();
 		match(')');
 		Break::cur.push(w);
 		Continue::cur.push(w);// continue 跳转到语句开头执行
-		w->S1 = stmt();
+		w->body = stmt();
 		Continue::cur.pop();
 		Break::cur.pop();
 		return w;
@@ -258,12 +258,12 @@ protected:
 		match(DO);
 		Break::cur.push(d);
 		Continue::cur.push(d);// continue 跳转到语句开头执行
-		d->S1 = stmt();
+		d->body = stmt();
 		Continue::cur.pop();
 		Break::cur.pop();
 		match(WHILE);
 		match('(');
-		d->C = expr_cond();
+		d->cond = expr_cond();
 		match(')');
 		match(';');
 		return d;
@@ -277,11 +277,11 @@ protected:
 		match(';');
 		f->C = expr_cond();
 		match(';');
-		f->S2 = stmt_assign();
+		f->step = stmt_assign();
 		match(')');
 		Break::cur.push(f);
-		Continue::cur.push(f->S2);// continue直接跳转到第二条赋值语句开头执行
-		f->S3 = stmt();
+		Continue::cur.push(f->step);// continue直接跳转到第二条赋值语句开头执行
+		f->body = stmt();
 		Continue::cur.pop();
 		Break::cur.pop();
 		return f;
@@ -291,7 +291,7 @@ protected:
 		Case *c = new Case;
 		c->line = lexer->line;
 		match(CASE);
-		c->E = expr_expr();
+		c->expr = expr_expr();
 		while (s->kind != END){
 			Integer *i = (Integer*)s;
 			match(INT);
@@ -330,11 +330,11 @@ protected:
 	}
 	// 表达式语句
 	BinaryExpr* expr_binary() {
-		Expr* pL = expr_binary();
+		ExprAST* pL = expr_binary();
 		while (s->kind) {
 			Word* w = (Word*)s;
 			if (compare(w->word, pL->opt)) {
-				Expr* pR = expr_binary();
+				ExprAST* pR = expr_binary();
 			}
 			pL = new BinaryExpr(w->word, pL, pR);
 		}
@@ -354,9 +354,9 @@ protected:
 		}
 		return u;
 	}
-	Expr* expr_factor()
+	ExprAST* expr_factor()
 	{
-		Expr* e = nullptr;
+		ExprAST* e = nullptr;
 		switch (s->kind){
 		case '(': match('('); e = expr_binary(); match(')'); break;
 		case ID: 			
@@ -374,7 +374,7 @@ protected:
 		return e;
 	}
 	// 函数调用
-	Expr* expr_call(){
+	ExprAST* expr_call(){
 		Call *c = new Call;
 		c->line = lexer->line;
 		c->func = (Function*)getId()->s;
@@ -382,7 +382,7 @@ protected:
 		// 函数调用
 		match('(');
 		while (s->kind == ID || s->kind == NUM){
-			Expr *e = expr_binary();
+			ExprAST *e = expr_binary();
 			if (e)c->args.push_back(e);
 			if (s->kind == ',') match(',');
 		}
@@ -403,7 +403,7 @@ public:
 		delete symbols;
 		delete globol;
 	}
-	Node* parse(char *filename){
+	ASTNode* parse(char *filename){
 		lexer->open(filename);
 		s = lexer->scan();// 预读一个词法单元，以便启动语法分析
 		node();

@@ -114,7 +114,7 @@ public:
 			fclose(file);
 	}
 	void open(char *filename) {
-		file = fopen(filename, "rb");
+		fopen_s(&file, filename, "rb");
 	}
 	char operator[](int i) {
 		return buf[(front + i) % size];

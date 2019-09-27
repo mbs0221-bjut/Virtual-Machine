@@ -11,6 +11,55 @@
 
 using namespace std;
 
+//-------------------------Òì³£´¦Àí------------------------
+class MismatchException : public exception {
+	int line;
+public:
+	MismatchException(int line) : exception(), line(line) { ; }
+	const char * what() const throw () {
+		return "Character mismatch";
+	}
+};
+
+class UndeclaredException : public exception {
+	int line;
+public:
+	UndeclaredException(int line) : exception(), line(line) { ; }
+	const char * what() const throw () {
+		return "Variable or function undeclared";
+	}
+};
+
+class MultipleDeclaredException : exception {
+	int line;
+public:
+	MultipleDeclaredException(int line) : exception(), line(line) { ; }
+	const char * what() const throw () {
+		return "Multiple labels are declared";
+	}
+};
+
+class InstructionUnsupportedException : exception {
+	int line;
+public:
+	InstructionUnsupportedException(int line) : exception(), line(line) { ; }
+	const char * what() const throw () {
+		return "Instruction unsupported";
+	}
+};
+
+#define MATCH_REG(l, s) \
+	match('$'); \
+	l->reg = ((Integer*)s)->value; \
+	match(NUM); 
+
+#define MATCH_ADDR(l, s) \
+	match('#'); \
+	l->addr = ((Integer*)s)->value; \
+	match(NUM); 
+
+//-------------------------»ã±à³ÌÐò------------------------
+
 class Asm{
 private:
 	int DS = 0;
@@ -20,253 +69,182 @@ private:
 	Lexer *lexer;
 	Codes *cs;
 	map<string, Label*> lables;
-	map<string, Func*> funcs;
-	bool match(int kind){
-		if (s->kind == kind){
-			s = lexer->scan();
-			return true;
+	map<string, Proc*> funcs;
+	// basic opts
+	inline BYTE match_reg() {
+		match('$');
+		BYTE reg = ((Integer*)s)->value;
+		match(NUM);
+		return reg;
+	}
+	inline WORD match_addr() {
+		match('#');
+		WORD addr = ((Integer*)s)->value;
+		match(NUM);
+		return addr;
+	}
+	inline Word* match_word() {
+		Word *w = (Word*)s;
+		match(ID);
+		return w;
+	}
+	// labels
+	Code* add_label(string name) {
+		if (lables.find(name) == lables.end()) {
+			lables[name] = new Label(lexer->line, name);
+		}
+		return lables[name];
+	}
+	// parser
+	void match(int kind){
+		if (s->kind != kind){
+			throw MismatchException(lexer->line);
 		}
 		s = lexer->scan();
-		return false;
 	}
 	void data(){
-		printf("[%03d]data.\n", lexer->line);
 		match('.');
 		match(DATA);
-		cs->offset = cs->width;
-		cs->width += ((Integer*)s)->value;
-		DS = 0;
+		//cs->offset = cs->width;
+		//cs->width += ((Integer*)s)->value;
+		//DS = 0;
 		match(NUM);
 	}
 	void stack(){
-		printf("[%03d]stack.\n", lexer->line);
 		match('.');
 		match(STACK);
-		cs->offset = cs->width;
-		cs->width += ((Integer*)s)->value;
-		SS = cs->width;
+		//cs->offset = cs->width;
+		//cs->width += ((Integer*)s)->value;
+		//SS = cs->width;
 		match(NUM);
 	}
 	void code(){
 		match('.');
 		match(CODE);
-		CS = cs->offset;
 		s = lexer->scan();
-		Code *c = new Code;
+		Code *c = new Code(0, CODE);
 		while (s->kind == PROC){
-			c = proc();
+			c = match_proc();
 			if (c){ 
-				printf("[%03d]find proc.\n", c->line);
-				cs->codes.push_back(c);
-				c->offset = cs->width; 
-				cs->width += c->width;
+				cs->pushCode(c);
 			}
 		}
 		match('#');
 	}
-	Code* proc(){
-		Func *f = new Func;
-		printf("[%03d]proc.\n", lexer->line);
+	Code* match_proc(){
 		match(PROC);
-		f->line = lexer->line;
-		f->offset = cs->width;
-		f->name = ((Word*)s)->word;
-		f->width = 0;
-		match(ID);
+		Word *w = match_word();
 		match(':');
-		funcs[f->name] = f;
-		Code *c = new Code;
-		while (s->kind != ENDP){
-			switch (s->kind){
-			case ID:c = label(); break;
-			case CALL: c = call(); break;
-			case LOAD:c = load(); break;
-			case STORE:c = store(); break;
-			case PUSH:c = push(); break;
-			case POP:c = pop(); break;
-			case HALT:c = halt(); break;
-			case JE: c = jmp(JE); break;
-			case JNE: c = jmp(JNE); break;
-			case JB: c = jmp(JB); break;
-			case JG: c = jmp(JG); break;
-			case JMP: c = jmp(JMP); break;
-			case '~':c = unary(); break;
-			case ADD:c = arith(ADD); break;
-			case SUB:c = arith(SUB); break;
-			case '+':c = arith(ADD); break;
-			case '-':c = arith(SUB); break;
-			case '*':c = arith(MUL); break;
-			case '/':c = arith(DIV); break;
-			case '%':c = arith(MOD); break;
-			case '<':c = arith(CMP); break;
-			case '>':c = arith(CMP); break;
-			case '=':c = arith(CMP); break;
-			case '!':c = arith(CMP); break;
-			default:printf("[%3d]find unsupported cmd '%c\n", lexer->line, s->kind); break;
-			}
-			if (c){ f->codes.push_back(c); c->offset = f->width; f->width += c->width; }
-		}
+		Code *body = match_codes();
 		match(ENDP);
-		return f;
+		Proc *proc = new Proc(lexer->line, w->word, body);
+		funcs[w->word] = proc;
+		return proc;
 	}
-	Code* call(){
-		Call *c = new Call;
-		c->line = lexer->line;
-		printf("[%03d]call.\n", lexer->line);
-		match(CALL);
-		if (funcs.find(((Word*)s)->word) == funcs.end()){
-			printf("[%3d] '%d' undeclared function.\n", lexer->line, s->kind);
-			match(ID);
-			return c;
+	Code* match_codes() {
+		Codes *cs, *c;
+		cs = new Codes(lexer->line);
+		while (s->kind != ENDP) {
+			Code *c;
+			switch (s->kind) {
+			case ID:c = match_label(); break;
+			case CALL: c = match_call(); break;
+			case LOAD:c = match_load(); break;
+			case STORE:c = match_store(); break;
+			case PUSH:c = match_push(); break;
+			case POP:c = match_pop(); break;
+			case HALT:c = match_halt(); break;
+			case JE: 
+			case JNE: 
+			case JB: 
+			case JG: 
+			case JMP: c = match_jmp(); break;
+			case ADD:
+			case SUB:
+			case '+':
+			case '-':
+			case '*':
+			case '/':
+			case '%':
+			case '<':
+			case '>':
+			case '=':c = match_arith(); break;
+			case '!':
+			case '~':c = match_unary(); break;
+			default: throw InstructionUnsupportedException(lexer->line); break;
+			}
+			if (c) { cs->pushCode(c); }
 		}
-		c->func = funcs[((Word*)s)->word];
-		match(ID);
-		c->width = 3;
-		return c;
 	}
-	Code* pop(){
-		Pop *p = new Pop;
-		printf("[%03d]pop.\n", lexer->line);
-		p->line = lexer->line;
-		p->opt = POP;
-		match(POP);
-		match('$');
-		p->reg = ((Integer*)s)->value;
-		match(NUM);
-		p->width = 2;
-		return p;
-	}
-	Code* push(){
-		Push *p = new Push;
-		printf("[%03d]push.\n", lexer->line);
-		p->line = lexer->line;
-		p->opt = PUSH;
-		match(PUSH);
-		match('$');
-		p->reg = ((Integer*)s)->value;
-		match(NUM);
-		p->width = 2;
-		return p;
-	}
-	Code* store(){
-		Store *l = new Store;
-		Token *i = new Integer(NUM, 0);;
-		printf("[%03d]store.\n", lexer->line);
-		l->line = lexer->line;
-		l->opt = STORE;
-		match(STORE);
-		match('$');
-		l->reg = ((Integer*)s)->value;
-		match(NUM);
-		switch (s->kind){
-		case NUM:l->am |= MR_A; i = s; match(NUM); break;// immÁ¢¼´ÊýÑ°Ö·
-		case '#':l->am |= MR_B; match('#'); i = s; match(NUM); break;// #addrÖ±½ÓÑ°Ö·
-		case '[':l->am |= MR_C; match('['); i = s; match(NUM); match(']'); break;// [addr]¼ä½ÓÑ°Ö·
-		case REG:l->am |= MR_D; i = s; match(REG); break;// reg¼Ä´æÆ÷Ñ°Ö·
-		default:break;
-		}
-		l->addr = ((Integer*)i)->value;
-		l->width = 4;
-		return l;
-	}
-	Code* load(){
-		Load *l = new Load;
-		Token *i = new Integer(NUM, 0);
-		printf("[%03d]load.\n", lexer->line);
-		l->line = lexer->line;
-		l->opt = LOAD;
-		match(LOAD);
-		match('$');
-		l->reg = ((Integer*)s)->value;
-		match(NUM);
-		switch (s->kind){
-		case NUM:l->am |= MR_A; i = s; match(NUM); break;// immÁ¢¼´ÊýÑ°Ö·
-		case '#':l->am |= MR_B; match('#'); i = s; match(NUM); break;// #addrÖ±½ÓÑ°Ö·
-		case '[':l->am |= MR_C; match('['); i = s; match(NUM); match(']'); break;// [addr]¼ä½ÓÑ°Ö·
-		case REG:l->am |= MR_D; i = s; match(REG); break;// reg¼Ä´æÆ÷Ñ°Ö·
-		default:break;
-		}
-		l->addr = ((Integer*)i)->value;
-		l->width = 4;
-		return l;
-	}
-	Code* label(){
-		printf("[%03d]label.\n", lexer->line);
-		if (lables.find(((Word*)s)->word) == lables.end()){
-			lables[((Word*)s)->word] = new Label((Word*)s, cs->width);
-		}else{
-			lables[((Word*)s)->word]->offset = cs->width;
-		}
-		match(ID);
+	Code* match_label() {
+		Word *w = match_word();
 		match(':');
+		return add_label(w->word);
+	}
+	Code* match_call(){
+		match(CALL);
+		Word *w = match_word();
+		if (funcs.find(w->word) != funcs.end()){
+			Proc *func = funcs[w->word];
+			match(ID);
+			return new Call(lexer->line, func);
+		}
+		throw exception("", 1);
 		return nullptr;
 	}
-	Code* unary(){
-		Unary *u = new Unary;
-		printf("[%03d]unary.\n", lexer->line);
-		u->line = lexer->line;
+	Code* match_load() {
+		BYTE reg = match_reg();
+		WORD addr = match_addr();
+		return new Load(lexer->line, reg, addr);
+	}
+	Code* match_store(){
+		match(STORE);
+		BYTE reg = match_reg();
+		WORD addr = match_addr();
+		return new Store(lexer->line, reg, addr);
+	}
+	Code* match_push() {
+		match(PUSH);
+		BYTE reg = match_reg();
+		return new Push(lexer->line, reg);
+	}
+	Code* match_pop() {
+		match(POP);
+		BYTE reg = match_reg();
+		match(NUM);
+		return new Pop(lexer->line, reg);
+	}
+	Code* match_unary(){
 		match('~');
-		u->opt = NEG;
-		match('$');
-		u->reg1 = ((Integer*)s)->value;
-		match(NUM);
-		match('$');
-		u->reg2 = ((Integer*)s)->value;
-		match(NUM);
-		u->width = 3;
-		return u;
+		BYTE reg1 = match_reg();
+		BYTE reg2 = match_reg();
+		return new Unary(lexer->line, NEG, reg1, reg2);
 	}
-	Code* arith(BYTE b){
-		Arith *a = new Arith;
-		printf("[%03d]arith.\n", lexer->line);
-		a->line = lexer->line;
-		a->opt = b;
+	Code* match_arith(){
+		BYTE opt = s->kind;
 		match(s->kind);
-		match('$');
-		a->reg1 = ((Integer*)s)->value;
-		match(NUM);
-		match('$');
-		a->reg2 = ((Integer*)s)->value;
-		match(NUM);
-		match('$');
-		a->reg3 = ((Integer*)s)->value;
-		match(NUM);
-		a->width = 4;
-		return a;
+		BYTE reg1 = match_reg();
+		BYTE reg2 = match_reg();
+		BYTE reg3 = match_reg();
+		return new Arith(lexer->line, opt, reg1, reg2, reg3);
 	}
-	Code* jmp(BYTE b){
-		Jmp *j = new Jmp;
-		printf("[%03d]jmp.\n", lexer->line);
-		j->line = lexer->line;
-		j->opt = b;
-		match(s->kind);
-		if (lables.find(((Word*)s)->word) == lables.end()){
-			// Ã»ÓÐ±êÇ©
-			j->addr = new Label((Word*)s, cs->width);
-			lables[((Word*)s)->word] = j->addr;
-		}
-		else{
-			j->addr = lables[((Word*)s)->word];
-		}
+	Code* match_jmp(){
+		match(JMP);
+		Word *w = match_word();
+		Label *label = (Label*)add_label(w->word);
 		match(ID);
-		j->width = 3;
-		return j;
+		return new Jmp(lexer->line, label);
 	}
-	Code* halt(){
-		Halt *h = new Halt;
-		printf("[%03d]halt.\n", lexer->line);
-		h->line = lexer->line;
-		h->opt = HALT;
-		h->width = 1;
+	Code* match_halt(){
 		match(HALT);
-		return h;
+		return new Halt(lexer->line);
 	}
 public:
 	Asm(string fp){
 		lexer = new Lexer(fp);
 	}
 	void parse(){
-		cs = new Codes;
+		cs = new Codes(lexer->line);
 		data();
 		stack();
 		code();
@@ -276,10 +254,24 @@ public:
 		fwrite(&DS, sizeof(WORD), 1, fp);
 		fwrite(&CS, sizeof(WORD), 1, fp);
 		fwrite(&SS, sizeof(WORD), 1, fp);
-		fwrite(&cs->width, sizeof(WORD), 1, fp);
+		//fwrite(&cs->width, sizeof(WORD), 1, fp);
 		//fwrite(&b, sizeof(BYTE)*CS, 1, fp);
 		cs->code(fp);
 	}
 };
 
+
+//printf("[%03d]data.\n", lexer->line);
+//printf("[%03d]stack.\n", lexer->line);
+//printf("[%03d]proc.\n", lexer->line);
+//printf("[%03d]call.\n", lexer->line);
+//printf("[%03d]pop.\n", lexer->line);
+//printf("[%03d]push.\n", lexer->line);
+//printf("[%03d]load.\n", lexer->line);
+//printf("[%03d]store.\n", lexer->line);
+//printf("[%03d]label.\n", lexer->line);
+//printf("[%03d]unary.\n", lexer->line);
+//printf("[%03d]arith.\n", lexer->line);
+//printf("[%03d]jmp.\n", lexer->line);
+//printf("[%03d]halt.\n", lexer->line);
 #endif

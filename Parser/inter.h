@@ -6,16 +6,21 @@
 #include <list>
 #include <stack>
 
-struct Node{
+class Visitor;
+
+class ASTNode{
+	friend class Visitor;
+public:
 	virtual void code(FILE *fp){
 
 	}
 };
 
-struct Nodes :Node{
-	list<Node*> nodes;
+class Nodes :ASTNode{
+	list<ASTNode*> nodes;
+public:
 	virtual void code(FILE *fp){
-		list<Node*>::iterator iter;
+		list<ASTNode*>::iterator iter;
 		for (iter = nodes.begin(); iter != nodes.end(); iter++){
 			(*iter)->code(fp);
 		}
@@ -23,15 +28,16 @@ struct Nodes :Node{
 };
 
 //语句
-struct Stmt :Node{
+class Stmt :ASTNode{
 	int line;
 	int begin, next;
 	static int label;
+public:
 	static int newlabel(){
 		return label++;
 	}
 	virtual void code(FILE *fp){
-		Node::code(fp);
+		ASTNode::code(fp);
 		printf("[%04d]", line);
 	}
 };
@@ -39,8 +45,9 @@ struct Stmt :Node{
 int Stmt::label = 0;
 
 //语句块
-struct Stmts :Stmt{
+class Stmts :Stmt{
 	list<Stmt*> Ss;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("stmts\n");
@@ -52,44 +59,42 @@ struct Stmts :Stmt{
 };
 
 //表达式
-struct Expr :Stmt{
+class ExprAST : Stmt{
 	int label;
 	static int count;
-	Expr() { label = count++; }
+public:
+	ExprAST() { label = count++; }
 	virtual void code(FILE *fp){
-		Node::code(fp);
+		ASTNode::code(fp);
 	}
 };
 
-int Expr::count = 0;
+int ExprAST::count = 0;
 
 // 双目表达式
-struct BinaryExpr : Expr {
+class BinaryExpr : ExprAST {
 	Word opt;
-	Expr *pL, *pR;
-	BinaryExpr(Word &opt, Expr *pL, Expr *pR) : opt(opt), pL(pL), pR(pR) { ; }
+	ExprAST *pL, *pR;
+public:
+	BinaryExpr(Word &opt, ExprAST *pL, ExprAST *pR) : opt(opt), pL(pL), pR(pR) { ; }
 	virtual void code(FILE *fp) override {
-		Expr::code(fp);
-		pL->code(fp);
-		pR->code(fp);
-		fprintf(fp, "\t%c $%d $%d $%d\n", opt.word.c_str(), pL->label, pR->label, label);
+		ExprAST::code(fp);
 	}
 };
 
 // 单目表达式
-struct UnaryExpr :Expr{
+class UnaryExpr :ExprAST{
 	Word opt;
-	Expr *E1;
-	UnaryExpr(Word &opt, Expr *E1) :opt(opt), E1(E1){  }
+	ExprAST *E1;
+public:
+	UnaryExpr(Word &opt, ExprAST *E1) :opt(opt), E1(E1){  }
 	virtual void code(FILE *fp){
-		Expr::code(fp);
-		E1->code(fp);
-		fprintf(fp, "\t%c $%d $%d\n", opt, E1->label, label);
+		ExprAST::code(fp);
 	}
 };
 
 // ID
-struct Id :Expr{
+class Id :ExprAST{
 	Type *type;
 	Word *name;
 	int offset;
@@ -100,7 +105,7 @@ public:
 	const char* getTypeName() { return type->word.c_str(); }
 	int getWidth() { return type->width; }
 	virtual void code(FILE *fp){
-		Expr::code(fp);
+		ExprAST::code(fp);
 		char *width = type == Type::Int ? "dw" : "b";
 		if (global){
 			fprintf(fp, "\tload%s $%d %s\n", width, label, name->getName());
@@ -110,18 +115,20 @@ public:
 	}
 };
 
-struct Constant : Expr{
+class Constant : ExprAST{
 	Integer *s;
+public:
 	Constant(Integer *s) : s(s){  }
 	virtual void code(FILE *fp){
-		Expr::code(fp);
+		ExprAST::code(fp);
 		char width = s->value > 256 ? 'w' : 'b';
 		fprintf(fp, "\tload%c $%d %d\n", width, label, s->value);
 	}
 };
 
-struct Decl :Stmt{
+class Decl :Stmt{
 	list<Id*> ids;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("data\n");
@@ -136,120 +143,127 @@ struct Decl :Stmt{
 	}
 };
 
-struct Assign :Stmt{
-	Id *E1;
-	Expr *E2;
+class Assign :Stmt{
+	Id *id;
+	ExprAST *expr;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("assign\n");
-		E2->code(fp);
-		if (E1->global){
-			fprintf(fp, "\tstore %s $%d\n", E1->getName(), E2->label);
+		expr->code(fp);
+		if (id->global){
+			fprintf(fp, "\tstore %s $%d\n", id->getName(), expr->label);
 		}else{
-			fprintf(fp, "\tstore %s $%d\n", E1->getName(), E2->label);
+			fprintf(fp, "\tstore %s $%d\n", id->getName(), expr->label);
 		}
 	}
 };
 
-struct If :Stmt{
-	Expr *C;
-	Stmt *S1;
+class If :Stmt{
+	ExprAST *cond;
+	Stmt *body;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("if\n");
 		next = newlabel();
-		S1->next = next;
+		body->next = next;
 		// 计算表达式
-		C->code(fp);
+		cond->code(fp);
 		// 为False跳转
 		fprintf(fp, "jz L%d", next);// False跳转
-		S1->code(fp);
+		body->code(fp);
 		fprintf(fp, "L%d:\n", next);
 	}
 };
 
-struct IfElse :Stmt{
-	Expr *C;
-	Stmt *S1;
-	Stmt *S2;
+class IfElse :Stmt{
+	ExprAST *cond;
+	Stmt *body_t;
+	Stmt *body_f;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("if-else\n");
-		S1->next = newlabel();
-		S2->next = newlabel();
+		body_t->next = newlabel();
+		body_f->next = newlabel();
 		// 计算表达式
-		C->code(fp);
+		cond->code(fp);
 		// 为False跳转
 		fprintf(fp, "jz L%d:\n", next);// False跳转
-		S1->code(fp);
+		body_t->code(fp);
 		fprintf(fp, "\tjmp L%d\n", next);
 		fprintf(fp, "L%d:\n", next);
-		S2->code(fp);
-		fprintf(fp, "L%d:\n", S1->next);
+		body_f->code(fp);
+		fprintf(fp, "L%d:\n", body_t->next);
 	}
 };
 
-struct While :Stmt{
-	Expr *C;
-	Stmt *S1;
+class While :Stmt{
+	ExprAST *cond;
+	Stmt *body;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("while\n");
 		begin = newlabel();
 		next = newlabel();
-		S1->next = begin;
+		body->next = begin;
 		fprintf(fp, "L%d:\n", begin);
-		C->code(fp);
+		cond->code(fp);
 		fprintf(fp, "jz L:\n", next);// False跳转
-		S1->code(fp);
+		body->code(fp);
 		fprintf(fp, "\tjmp L%d\n", begin);
 		fprintf(fp, "L%d:\n", next);
 	}
 };
 
-struct Do :Stmt{
-	Expr *C;
-	Stmt *S1;
+class Do :Stmt{
+	ExprAST *cond;
+	Stmt *body;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("do-while\n");
 		begin = newlabel();
-		S1->next = begin;
+		body->next = begin;
 		fprintf(fp, "L%d:\n", begin);
-		S1->code(fp);
-		C->code(fp);
+		body->code(fp);
+		cond->code(fp);
 		fprintf(fp, "jnz L%d:\n", begin);// True跳转
 	}
 };
 
-struct For :Stmt{
-	Stmt *S1;
-	Expr *C;
-	Stmt *S2;
-	Stmt *S3;
+class For : Stmt{
+	Stmt *init;
+	ExprAST *cond;
+	Stmt *step;
+	Stmt *body;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("for\n");
 		begin = newlabel();
 		next = newlabel();
-		S2->begin = newlabel();
-		S2->next = newlabel();
-		S3->next = begin;
-		S1->code(fp);
+		step->begin = newlabel();
+		step->next = newlabel();
+		body->next = begin;
+		init->code(fp);
 		fprintf(fp, "L%d:\n", begin);
-		C->code(fp);
-		fprintf(fp, "L%d:\n", C->True); // False跳转
-		S3->code(fp);
-		fprintf(fp, "L%d:\n", S2->begin);
-		S2->code(fp);
+		cond->code(fp);
+		fprintf(fp, "L%d:\n", cond->label); // False跳转
+		body->code(fp);
+		fprintf(fp, "L%d:\n", step->begin);
+		step->code(fp);
 		fprintf(fp, "\tjmp L%d\n", begin);
 		fprintf(fp, "L%d:\n", next);
 	}
 };
 
-struct Case :Stmt{
-	Expr *E;
+class Case :Stmt{
+	ExprAST *expr;
 	map<int, Stmt*> Ss;
+public:
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("case\n");
@@ -260,18 +274,19 @@ struct Case :Stmt{
 			iter->second->code(fp);
 		}
 		fprintf(fp, "L%d:\n", begin);
-		E->code(fp);
+		expr->code(fp);
 		for (iter = Ss.begin(); iter != Ss.end(); iter++){
 			fprintf(fp, "L%d:\n", iter->second->begin);
-			fprintf(fp, "= $%d $%d #%d\n", E->label, iter->first);
+			fprintf(fp, "= $%d $%d #%d\n", expr->label, iter->first);
 			iter->second->code(fp);
 		}
 	}
 };
 
-struct Break :Stmt{
+class Break :Stmt{
 	Stmt *stmt;
 	static stack<Stmt*> cur;
+public:
 	Break(){
 		stmt = Break::cur.top();
 	}
@@ -284,9 +299,10 @@ struct Break :Stmt{
 
 stack<Stmt*> Break::cur = stack<Stmt*>();
 
-struct Continue :Stmt{
+class Continue :Stmt{
 	Stmt *stmt;
 	static stack<Stmt*> cur;
+public:
 	Continue(){
 		stmt = Continue::cur.top();
 	}
@@ -300,8 +316,9 @@ struct Continue :Stmt{
 stack<Stmt*> Continue::cur = stack<Stmt*>();
 
 // 异常处理程序
-struct Throw : Stmt {
+class Throw : Stmt {
 	Type* exception;// 抛出异常
+public:
 	Throw() {
 		exception = nullptr;
 	}
@@ -312,8 +329,9 @@ struct Throw : Stmt {
 	}
 };
 
-struct TryCatch : Stmt{
+class TryCatch : Stmt{
 	Stmt *pTry, *pCatch, *pFinally;
+public:
 	TryCatch() {
 		pTry = pCatch = pFinally = nullptr;
 	}
@@ -332,12 +350,14 @@ struct TryCatch : Stmt{
 	}
 };
 
-// 符号表
-struct Symbols{
+// -------------符号表-----------
+
+class Symbols{
 	int id;
 	static int count;
 	list<Id*> ids;
 	Symbols *prev, *next;
+public:
 	Symbols(){
 		id = count++;
 		ids.clear();
@@ -348,11 +368,14 @@ struct Symbols{
 
 int Symbols::count = 0;
 
-struct Function : Word{
+// -------------函数-----------
+
+class Function : Word{
 	Type *type;
 	Symbols *params;
 	Symbols *symbols;
 	Stmt* body;
+public:
 	Function(string name, Type *type) :Word(FUNCTION, name), type(type){
 		kind = FUNCTION;
 		params = new Symbols;
@@ -392,15 +415,17 @@ struct Function : Word{
 	}
 };
 
-struct Call :Expr{
-	list<Expr*> args;
+class Call :ExprAST{
+	list<ExprAST*> args;
 	Function *func;
+public:
 	Call() { args.clear(); }
+	Call(int line, Function *func) :ExprAST(), func(func) { ; }
 	virtual void code(FILE *fp){
 		Stmt::code(fp);
 		printf("call\n");
 		// 参数计算
-		list<Expr*>::iterator iter;
+		list<ExprAST*>::iterator iter;
 		for (iter = args.begin(); iter != args.end(); iter++){
 			(*iter)->code(fp);
 		}
@@ -414,11 +439,11 @@ struct Call :Expr{
 	}
 };
 
-struct Global :Node{
+class Global :ASTNode{
 	list<Id*> ids;
 	list<Function*> funcs;
 	virtual void code(FILE *fp){
-		Node::code(fp);
+		ASTNode::code(fp);
 		if (!ids.empty()){
 			int width = 0;
 			fprintf(fp, ".data\n");
@@ -443,3 +468,33 @@ struct Global :Node{
 };
 
 #endif
+
+#ifndef __VISITOR_H_
+
+class Visitor {
+public:
+	virtual void visit(ASTNode *node) = 0;
+};
+
+class BinaryExpr : Visitor {
+public:
+	virtual void visit(BinaryExpr *expr)  {
+
+	}
+};
+
+class UnaryExprVisitor : Visitor {
+public:
+	virtual void visit(UnaryExpr *expr) {
+
+	}
+};
+
+class StmtVisitor : Visitor{
+public:
+	virtual void visit(Stmt *stmt) {
+
+	}
+};
+
+#endif // !__VISITOR_H_

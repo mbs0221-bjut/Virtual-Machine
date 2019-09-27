@@ -73,6 +73,9 @@ struct Integer :Token{
 	}
 };
 
+#define DEF_KEY_WORD(key, type, value) words[key] = new Integer(type, value)
+
+
 // 词法分析器
 class Lexer{
 	ifstream inf;
@@ -133,22 +136,22 @@ public:
 	// MIPS指令集
 	void MIPS(){
 		// R-type
-		words["add"] = new Integer(RTYPE, 0x00000020);
-		words["addu"] = new Integer(RTYPE, 0x00000021);
-		words["sub"] = new Integer(RTYPE, 0x00000022);
-		words["subu"] = new Integer(RTYPE, 0x00000023);
-		words["and"] = new Integer(RTYPE, 0x00000024);
-		words["or"] = new Integer(RTYPE, 0x00000025);
-		words["xor"] = new Integer(RTYPE, 0x00000026);
-		words["nor"] = new Integer(RTYPE, 0x00000027);
-		words["slt"] = new Integer(RTYPE, 0x0000002A);
-		words["sltu"] = new Integer(RTYPE, 0x0000002B);
-		words["sll"] = new Integer(RTYPE, 0x00000000);
-		words["srl"] = new Integer(RTYPE, 0x00000002);
-		words["ara"] = new Integer(RTYPE, 0x00000003);
-		words["add"] = new Integer(RTYPE, 0x00000004);
-		words["add"] = new Integer(RTYPE, 0x00000005);
-		words["srav"] = new Integer(RTYPE, 0x00000006);
+		DEF_KEY_WORD("add",RTYPE, 0x00000020);
+		DEF_KEY_WORD("addu",RTYPE, 0x00000021);
+		DEF_KEY_WORD("sub",RTYPE, 0x00000022);
+		DEF_KEY_WORD("subu",RTYPE, 0x00000023);
+		DEF_KEY_WORD("and",RTYPE, 0x00000024);
+		DEF_KEY_WORD("or",RTYPE, 0x00000025);
+		DEF_KEY_WORD("xor",RTYPE, 0x00000026);
+		DEF_KEY_WORD("nor",RTYPE, 0x00000027);
+		DEF_KEY_WORD("slt",RTYPE, 0x0000002A);
+		DEF_KEY_WORD("sltu",RTYPE, 0x0000002B);
+		DEF_KEY_WORD("sll",RTYPE, 0x00000000);
+		DEF_KEY_WORD("srl",RTYPE, 0x00000002);
+		DEF_KEY_WORD("ara",RTYPE, 0x00000003);
+		DEF_KEY_WORD("add",RTYPE, 0x00000004);
+		DEF_KEY_WORD("add",RTYPE, 0x00000005);
+		DEF_KEY_WORD("srav",RTYPE, 0x00000006);
 		// I-Type
 
 		// J-Type

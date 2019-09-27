@@ -6,7 +6,7 @@ void main(){
 	FILE *fp = &file;
 	Parser *p = new Parser();
 	printf("开始语法分析\n");
-	Node *st = p->parse("Text.txt");
+	ASTNode *st = p->parse("Text.txt");
 	printf("语法分析结束\n");
 	printf("编译开始\n");
 	printf(" line  stmt\n");
@@ -20,5 +20,5 @@ void main(){
 	//parse(fp);
 	//printf("SLR(1)语法分析结束\n");
 	//fclose(fp);
-	cin >> a;
+	//cin >> a;
 }
