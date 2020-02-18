@@ -11,7 +11,7 @@ void main(){
 	printf("±àÒë¿ªÊ¼\n");
 	printf(" line  stmt\n");
 	fopen_s(&fp, "data.s", "w");
-	st->code(fp);
+	st->Codegen(fp);
 	fclose(fp);
 	printf("±àÒë½áÊø\n");
 	delete p;

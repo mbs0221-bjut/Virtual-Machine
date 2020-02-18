@@ -45,5 +45,11 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="inter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

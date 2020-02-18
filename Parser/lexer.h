@@ -15,10 +15,11 @@
 using namespace std;
 
 enum Tag{
-	IF = 256, THEN, ELSE, DO, WHILE, FOR, CASE, BREAK, CONTINUE, TRY, CATCH, FINALLY, THROW,
+	IF = 256, THEN, ELSE, DO, WHILE, FOR, SWITCH, CASE, BREAK, CONTINUE, TRY, CATCH, FINALLY, THROW,
 	BASIC, INT, CHAR,
 	END,
 	ID, NUM, FUNCTION,
+	ASSIGN, // ASSIGN
 	AND, OR, NOT, // LOGIC
 	BIT_AND, BIT_OR, BIT_NOT, // BIT LOGIC
 	EQ, NEQ, // REL
@@ -36,20 +37,6 @@ struct Token{
 	virtual string place(){
 		ostringstream s;
 		s << kind;
-		return s.str();
-	}
-	virtual string code(){
-		ostringstream s;
-		char *keywords[] = { 
-			"IF", "THEN", "ELSE", "DO", "WHILE", "FOR", 
-			"CASE", "BREAK", "CONTINUE", 
-			"TRY", "CATCH", "FINALLY", "THROW",
-			"ID", "BASIC", "INT", "CHAR", "END"
-		};
-		if (kind >=IF && kind <= END)
-			s << keywords[kind - IF];
-		else
-			s << (char)kind;
 		return s.str();
 	}
 };
@@ -259,16 +246,16 @@ public:
 			case '>':
 			case '=':
 				buffer.pop();
-				return words[ch];// ÔËËã·û
+				return words[ch];
 				break;
 			default:
 				break;
 		}
 		ch[1] = '\0';
 		if (words.find(ch) != words.end()) {
-			return words[ch];// ÔËËã·û
+			return words[ch];
 		}
-		return new Token(ch[0]);//ÆÕÍ¨×Ö·û
+		return new Token(ch[0]);
 	}
 	Token *scan()
 	{
@@ -284,7 +271,7 @@ public:
 				str.push_back(ch);
 				ch = buffer.peak();
 				buffer.read();
-			} while (isalnum(ch) || ch == '_');  //1×´Ì¬
+			} while (isalnum(ch) || ch == '_');
 			if (words.find(str) == words.end()){
 				return new Word(ID, str);
 			}
