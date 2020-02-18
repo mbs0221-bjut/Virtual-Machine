@@ -23,9 +23,10 @@ TODO：
 
 * Virtual-Machine 1.2
  * 编译器：
-  * 运算：支持双目和单目算术逻辑运算
-  * 变量：支持变量作用域，实现全局变量和局部变量定义
-  * 控制流：实现了for, do-while, while, case语句，支持break和continue
+  * 运算：支持双目和单目算术逻辑运算。
+  * 变量：支持变量作用域，实现全局变量和局部变量定义。
+  * 控制流：实现了for, do-while, while, switch-case语法，支持break和continue。
+  * 异常处理：添加了try-catch-finally语法。
   * 函数：实现了函数定义和调用的语法分析。
  * 汇编器：
   * 支持条件转移
