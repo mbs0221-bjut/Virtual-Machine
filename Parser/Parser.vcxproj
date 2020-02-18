@@ -72,11 +72,13 @@
     <Text Include="Text.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="builder.cpp" />
     <ClCompile Include="inter.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="parser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="builder.h" />
     <ClInclude Include="G.txt" />
     <ClInclude Include="inter.h" />
     <ClInclude Include="lexer.h" />

@@ -5,13 +5,14 @@
 
 #include <list>
 #include <stack>
+#include "builder.h"
 
 class Visitor;
 
 class ASTNode{
 	friend class Visitor;
 public:
-	virtual void Codegen(FILE *fp) = 0;
+	virtual Value * Codegen() = 0;
 };
 
 //语句
@@ -23,7 +24,7 @@ public:
 	static int newlabel(){
 		return label++;
 	}
-	virtual void Codegen(FILE *fp);
+	virtual Value * Codegen() = 0;
 };
 
 int Stmt::label = 0;
@@ -33,7 +34,7 @@ class Block : public Stmt{
 	vector<Stmt*> block;
 public:
 	Block(vector<Stmt*> &block) : block(block) {  }
-	virtual void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 //表达式
@@ -43,7 +44,7 @@ public:
 	int label;
 	static int count;
 	ExprAST() { label = count++; }
-	virtual void Codegen(FILE *fp);
+	virtual Value * Codegen() = 0;
 };
 
 int ExprAST::count = 0;
@@ -54,7 +55,7 @@ class BinaryExprAST : public ExprAST {
 public:
 	BinaryExprAST(int opt, ExprAST *pL, ExprAST *pR) 
 		 : opt(opt), pL(pL), pR(pR) { }
-	virtual void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class UnaryExprAST : public ExprAST{
@@ -63,14 +64,14 @@ class UnaryExprAST : public ExprAST{
 public:
 	UnaryExprAST(int opt, ExprAST *E1)
 		: opt(opt), E1(E1){ }
-	virtual void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class VariableExprAST : public ExprAST {
 	string name;
 public:
 	VariableExprAST(const string &name) : name(name){ }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class AssignExprAST : public VariableExprAST {
@@ -78,14 +79,14 @@ class AssignExprAST : public VariableExprAST {
 public:
 	AssignExprAST(const string &name, ExprAST *expr)
 		: VariableExprAST(name), expr(expr) {  }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class ConstantExprAST : public ExprAST {
 	Integer *s;
 public:
 	ConstantExprAST(Integer *s) : s(s) { }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class AccessExprAST : public VariableExprAST {
@@ -93,23 +94,25 @@ class AccessExprAST : public VariableExprAST {
 public:
 	AccessExprAST(const string &name, ExprAST *loc)
 		: VariableExprAST(name), loc(loc) {  }
+	Value * Codegen();
 };
 
-//class MemberExpr : public ExprAST {
-//	string name;
-//	ExprAST *index;
-//public:
-//	MemberExpr(const string name, ExprAST *index)
-//		: name(name), index(index) { }
-//};
-//
-//class PointerExpr : public ExprAST {
-//	string name;
-//	ExprAST *index;
-//public:
-//	PointerExpr(const string name, ExprAST *index)
-//		: name(name), index(index) { }
-//};
+class MemberExpr : public ExprAST {
+	string name;
+	ExprAST *index;
+public:
+	MemberExpr(const string name, ExprAST *index)
+		: name(name), index(index) { }
+	Value * Codegen();
+};
+
+class PointerExpr : public ExprAST {
+	string name;
+	ExprAST *index;
+public:
+	PointerExpr(const string name, ExprAST *index)
+		: name(name), index(index) { }
+};
 
 class CallExprAST : public ExprAST {
 	string callee;
@@ -118,13 +121,13 @@ public:
 	CallExprAST() { args.clear(); }
 	CallExprAST(const string &callee, vector<ExprAST*> &args)
 		 : callee(callee), args(args) { ; }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class Decl : Stmt{
 	list<VariableExprAST*> ids;
 public:
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class IfElse : public Stmt{
@@ -134,7 +137,7 @@ class IfElse : public Stmt{
 public:
 	IfElse(ExprAST *cond, Stmt *body_t, Stmt *body_f)
 		: cond(cond), body_t(body_t), body_f(body_f) { }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class WhileDo : public Stmt{
@@ -142,7 +145,7 @@ class WhileDo : public Stmt{
 	Stmt *body;
 public:
 	WhileDo(ExprAST *cond, Stmt *body) :cond(cond), body(body) {  }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class DoWhile : public Stmt{
@@ -150,7 +153,7 @@ class DoWhile : public Stmt{
 	Stmt *body;
 public:
 	DoWhile(ExprAST *cond, Stmt *body) :cond(cond), body(body) {  }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class For : public Stmt{
@@ -159,7 +162,7 @@ class For : public Stmt{
 public:
 	For(ExprAST *init, ExprAST *cond, ExprAST *step, Stmt *body) 
 		: init(init), cond(cond), step(step), body(body) {  }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 typedef pair<int, Stmt*> Case;
@@ -170,21 +173,21 @@ class Switch : public Stmt {
 public:
 	Switch(ExprAST *expr, vector<pair<int, Stmt*>> &cases)
 		: expr(expr), cases(cases) {  }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class Break : public Stmt{
 	Stmt *stmt;
 public:
 	Break(Stmt *next) : stmt(next) { }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class Continue : public Stmt{
 	Stmt *next;
 public:
 	Continue(Stmt *next) : next(next) { }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class Throw : public Stmt {
@@ -193,7 +196,7 @@ public:
 	Throw() {
 		exception = nullptr;
 	}
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
 class TryCatch : public Stmt{
@@ -201,29 +204,11 @@ class TryCatch : public Stmt{
 public:
 	TryCatch(Stmt* pTry, Stmt* pCatch, Stmt* pFinally) 
 		 : pTry(pTry), pCatch(pCatch), pFinally(pFinally) { }
-	void Codegen(FILE *fp);
+	Value * Codegen();
 };
 
-// -------------符号表-----------
 typedef map<string, Type*> SymbolTable;
 
-//class Symbols{
-//public:
-//	int id;
-//	static int count;
-//	list<Id*> ids;
-//	Symbols *prev, *next;
-//	Symbols(){
-//		id = count++;
-//		ids.clear();
-//		prev = nullptr;
-//		next = nullptr;
-//	}
-//};
-//
-//int Symbols::count = 0;
-
-// -------------函数-----------
 class ParameterAST {
 	Type *type;
 	string name;
@@ -238,7 +223,7 @@ class PrototypeAST {
 public:
 	PrototypeAST(Type *type, const string &name, vector<ParameterAST*> &args)
 		: type(type), name(name), args(args) { }
-	void Codegen(FILE * fp);
+	Value * Codegen();
 };
 
 class FunctionAST {
@@ -246,19 +231,19 @@ class FunctionAST {
 	Stmt *body;
 public:
 	FunctionAST(PrototypeAST *proto, Stmt *body) : proto(proto), body(body) { }
-	void Codegen(FILE * fp);
+	Value * Codegen();
 };
 
 class Global : ASTNode {
 	map<string, Type*> symbols;
 public:
-	void putId(string name, Type* type) {
+	Value * putId(string name, Type* type) {
 		symbols[name] = type;
 	}
 	Type* getId(string name) {
 		return symbols[name];
 	}
-	virtual void code(FILE *fp){
+	Value * code(){
 		ASTNode::Codegen(fp);
 	}
 };
