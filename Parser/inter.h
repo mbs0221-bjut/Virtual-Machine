@@ -9,14 +9,14 @@
 
 class Visitor;
 
-class ASTNode{
+class AST{
 	friend class Visitor;
 public:
 	virtual Value * Codegen() = 0;
 };
 
-//Óï¾ä
-class Stmt : ASTNode{
+// Óï¾ä
+class Stmt : public AST{
 public:
 	int line;
 	int begin, next;
@@ -29,7 +29,7 @@ public:
 
 int Stmt::label = 0;
 
-//Óï¾ä¿é
+// Óï¾ä¿é
 class Block : public Stmt{
 	vector<Stmt*> block;
 public:
@@ -41,51 +41,47 @@ public:
 class ExprAST : public Stmt{
 public:
 	Type *type;
-	int label;
-	static int count;
-	ExprAST() { label = count++; }
 	virtual Value * Codegen() = 0;
 };
 
-int ExprAST::count = 0;
-
 class BinaryExprAST : public ExprAST {
 	int opt;
-	ExprAST *pL, *pR;
+	ExprAST *lhs, *rhs;
 public:
 	BinaryExprAST(int opt, ExprAST *pL, ExprAST *pR) 
-		 : opt(opt), pL(pL), pR(pR) { }
+		 : opt(opt), lhs(pL), rhs(pR) { }
 	Value * Codegen();
 };
 
 class UnaryExprAST : public ExprAST{
 	int opt;
-	ExprAST *E1;
+	ExprAST *rhs;
 public:
 	UnaryExprAST(int opt, ExprAST *E1)
-		: opt(opt), E1(E1){ }
+		: opt(opt), rhs(E1){ }
 	Value * Codegen();
 };
 
 class VariableExprAST : public ExprAST {
 	string name;
+	Type *type;
 public:
-	VariableExprAST(const string &name) : name(name){ }
+	VariableExprAST(const string &name, Type *type) : name(name), type(type){ }
 	Value * Codegen();
 };
 
 class AssignExprAST : public VariableExprAST {
-	ExprAST *expr;
+	ExprAST *rhs;
 public:
-	AssignExprAST(const string &name, ExprAST *expr)
-		: VariableExprAST(name), expr(expr) {  }
+	AssignExprAST(const string &name, ExprAST *rhs)
+		: VariableExprAST(name), rhs(rhs) {  }
 	Value * Codegen();
 };
 
 class ConstantExprAST : public ExprAST {
-	Integer *s;
+	Integer *num;
 public:
-	ConstantExprAST(Integer *s) : s(s) { }
+	ConstantExprAST(Integer *num) : num(num) { }
 	Value * Codegen();
 };
 
@@ -130,6 +126,7 @@ public:
 	Value * Codegen();
 };
 
+// ¿ØÖÆÁ÷
 class IfElse : public Stmt{
 	ExprAST *cond;
 	Stmt *body_t;
@@ -207,16 +204,18 @@ public:
 	Value * Codegen();
 };
 
-typedef map<string, Type*> SymbolTable;
+// »·¾³
+typedef map<string, AST*> SymbolTable;
 
-class ParameterAST {
+class ParameterAST : public AST{
 	Type *type;
 	string name;
 public:
 	ParameterAST(Type *type, string name) : type(type), name(name) { }
+	Value * Codegen();
 };
 
-class PrototypeAST {
+class PrototypeAST : public AST{
 	Type *type;
 	string name;
 	vector<ParameterAST*> args;
@@ -226,7 +225,7 @@ public:
 	Value * Codegen();
 };
 
-class FunctionAST {
+class FunctionAST : public AST{
 	PrototypeAST *proto;
 	Stmt *body;
 public:
@@ -234,7 +233,7 @@ public:
 	Value * Codegen();
 };
 
-class Global : ASTNode {
+class Global {
 	map<string, Type*> symbols;
 public:
 	Value * putId(string name, Type* type) {
@@ -242,9 +241,6 @@ public:
 	}
 	Type* getId(string name) {
 		return symbols[name];
-	}
-	Value * code(){
-		ASTNode::Codegen(fp);
 	}
 };
 

@@ -14,16 +14,16 @@ void Parser::parseDefinition()
 	Word *word = (Word*)s;
 	match(ID);
 	if (word->kind != '(') {
-		top_scope[word->word] = type;
+		global[word->str] = new VariableExprAST(word->str, type);
 		while (s->kind == ',') {
 			match(',');
-			top_scope[word->word] = type;
+			global[word->str] = new VariableExprAST(word->str, type);
 			match(ID);
 		}
 		match(';');
 		return;
 	}
-	FunctionAST *f = parseFunction(word->word, type);
+	global[word->str] = parseFunction(word->str, type);
 }
 
 PrototypeAST * Parser::parsePrototype(string name, Type * type)
@@ -34,12 +34,12 @@ PrototypeAST * Parser::parsePrototype(string name, Type * type)
 	if (s->kind == BASIC) {
 		Type *type = (Type*)s;
 		match(BASIC);
-		args.push_back(new ParameterAST(type, ((Word*)s)->word));
+		args.push_back(new ParameterAST(type, ((Word*)s)->str));
 		match(ID);
 		while (s->kind == ',') {
 			match(',');
 			match(BASIC);
-			args.push_back(new ParameterAST(type, ((Word*)s)->word));
+			args.push_back(new ParameterAST(type, ((Word*)s)->str));
 			match(ID);
 		}
 	}
@@ -59,26 +59,49 @@ FunctionAST * Parser::parseFunction(string name, Type * type)
 	return 0;
 }
 
+FunctionAST * Parser::parseTopLevelExpr()
+{
+	if (Stmt *Body = parseStmt()) {
+		// Make and anonymous proto
+		PrototypeAST *Proto = new PrototypeAST(Type::Void, "main", std::vector<ParameterAST*>());
+		return new FunctionAST(Proto, Body);
+	}
+	return 0;
+}
+
 Stmt * Parser::parseStmt()
 {
-	Stmt *st = nullptr;
 	// Óï·¨·ÖÎö
 	switch (s->kind) {
-	case BASIC:st = parseDeclaration(); break;
-	case ID:parseExpression(); break;
-	case IF:st = parseIfElse(); break;
-	case WHILE:st = parseWhileDo(); break;
-	case DO:st = parseDoWhile(); break;
-	case FOR:st = parseFor(); break;
-	case CASE:st = parseSwitch(); break;
-	case BREAK:st = parseBreak(); break;
-	case CONTINUE:st = parseContinue(); break;
-	case TRY:st = parseTryCatch(); break;
-	case ';':match(';'); break;
-	case '{':st = parseBlock(); break;
-	default:match(s->kind); break;
+	case BASIC:
+		return parseDeclaration();
+	case ID:
+		return parseExpression();
+	case IF:
+		return parseIfElse();
+	case WHILE:
+		return parseWhileDo();
+	case DO:
+		return parseDoWhile();
+	case FOR:
+		return parseFor();
+	case CASE:
+		return parseSwitch();
+	case BREAK:
+		return parseBreak();
+	case CONTINUE:
+		return parseContinue();
+	case TRY:
+		return parseTryCatch();
+	case ';':
+		match(';');
+		return parseStmt();
+	case '{':
+		return parseBlock();
+	default:
+		match(s->kind);
+		return parseStmt();
 	}
-	return st;
 }
 
 Stmt * Parser::parseBlock()
@@ -99,11 +122,11 @@ Stmt * Parser::parseDeclaration()
 {
 	Type *type = (Type*)s;
 	match(BASIC);
-	top_scope[((Word*)s)->word] = type;
+	top_scope[((Word*)s)->str] = type;
 	match(ID);
 	while (s->kind == ',') {
 		match(',');
-		top_scope[((Word*)s)->word] = type;
+		top_scope[((Word*)s)->str] = type;
 		match(ID);
 	}
 	match(';');
@@ -271,37 +294,41 @@ ExprAST * Parser::parsePrimary()
 ExprAST * Parser::parseIdentifierExpr()
 {
 	// id ::= id | assign | call
-	string name = ((Word*)s)->word;
-	match(ID);
-	// assign
-	if (s->kind == '=') {
-		match('=');
-		ExprAST *expr = parseExpression();
-		return new AssignExprAST(name, expr);
-	}
-	// call
-	if (s->kind == '(') {
-		match('(');
-		vector<ExprAST*> args;
-		if (s->kind != ')') {
-			while (true) {
-				ExprAST *arg = parseExpression();
-				if (arg == nullptr)
-					return 0;
-				args.push_back(arg);
-
-				if (s->kind == ')')
-					break;
-
-				if (s->kind != ',')
-					return 0;
-				match(',');
-			}
-			match(')');
-			return new CallExprAST(name, args);
+	Word *w = (Word*)s;
+	string id = w->str;
+	if (global.find(id) != global.end()) {
+		match(ID);
+		// assign
+		if (s->kind == '=') {
+			match('=');
+			ExprAST *expr = parseExpression();
+			return new AssignExprAST(id, expr);
 		}
+		// call
+		if (s->kind == '(') {
+			match('(');
+			vector<ExprAST*> args;
+			if (s->kind != ')') {
+				while (true) {
+					ExprAST *arg = parseExpression();
+					if (arg == nullptr)
+						return 0;
+					args.push_back(arg);
+
+					if (s->kind == ')')
+						break;
+
+					if (s->kind != ',')
+						return 0;
+					match(',');
+				}
+				match(')');
+				return new CallExprAST(id, args);
+			}
+		}
+		return (VariableExprAST*)(global[id]);
 	}
-	return new VariableExprAST(name);
+	return nullptr;
 }
 
 ExprAST * Parser::parseConstantExpr()

@@ -42,34 +42,36 @@ struct Token{
 };
 
 struct Word :Token{
-	string word;
-	Word(int tag, string word) :Token(tag), word(word) {  }
+	string str;
+	Word(int tag, string word) :Token(tag), str(word) {  }
 	virtual string place(){
 		ostringstream s;
-		s << word;
+		s << str;
 		return s.str();
 	}
 	virtual string code(){
-		return word;
+		return str;
 	}
-	const char* getName() { return word.c_str(); }
+	const char* getName() { return str.c_str(); }
 };
 
 struct Type :Word{
 	int width;
-	static Type *Int, *Char, *Void;
+	static Type *Int, *Float, *Double, *Char, *Void;
 	Type(int kind, string word, int width) :Word(kind, word), width(width){  }
 	virtual string place(){
 		ostringstream s;
-		s << word << ":" << width;
+		s << str << ":" << width;
 		return s.str();
 	}
 	virtual string code(){
-		return word;
+		return str;
 	}
 };
 
-Type* Type::Int = new Type(BASIC, "dw", 4);
+Type* Type::Int = new Type(BASIC, "qw", 4);
+Type* Type::Float = new Type(BASIC, "dw", 2);
+Type* Type::Double = new Type(BASIC, "qw", 4);
 Type* Type::Char = new Type(BASIC, "db", 1);
 Type* Type::Void = new Type(BASIC, "void", 0);
 
@@ -143,6 +145,8 @@ public:
 	Lexer(){
 		words["int"] = Type::Int;
 		words["char"] = Type::Char;
+		words["float"] = Type::Float;
+		words["double"] = Type::Double;
 		words["void"] = Type::Void;
 		words["if"] = new Word(IF, "if");
 		words["then"] = new Word(THEN, "then");

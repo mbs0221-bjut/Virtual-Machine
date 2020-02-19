@@ -13,13 +13,13 @@ Value * Block::Codegen()
 
 Value * BinaryExprAST::Codegen()
 {
-	pL->Codegen();
-	pR->Codegen();
+	lhs->Codegen();
+	rhs->Codegen();
 }
 
 Value * UnaryExprAST::Codegen()
 {
-	E1->Codegen();
+	rhs->Codegen();
 }
 
 Value * VariableExprAST::Codegen()
@@ -28,7 +28,7 @@ Value * VariableExprAST::Codegen()
 
 Value * AssignExprAST::Codegen()
 {
-	expr->Codegen();
+	rhs->Codegen();
 }
 
 Value * ConstantExprAST::Codegen()
@@ -125,3 +125,7 @@ Value * PrototypeAST::Codegen()
 {
 }
 
+Value * ParameterAST::Codegen()
+{
+	return nullptr;
+}

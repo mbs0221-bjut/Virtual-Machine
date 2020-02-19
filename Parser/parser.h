@@ -11,7 +11,7 @@ private:
 	Lexer *lexer;
 	stack<Stmt*> blocks;
 	stack<SymbolTable> symbols;
-	SymbolTable top_scope;
+	SymbolTable top_scope, global;
 	bool match(int kind){
 		if (s->kind == kind){
 			s = lexer->scan();
@@ -63,7 +63,7 @@ private:
 		precedence["||"] = 1;
 	}
 	int GetTokPrecedence() {
-		return precedence[((Word*)s)->word];
+		return precedence[((Word*)s)->str];
 	}
 	bool compare(string &opa, string &opb) {
 		return precedence[opa] > precedence[opb];
@@ -73,12 +73,11 @@ protected:
 	void parseBlocks();
 	void parseDefinition();
 	PrototypeAST* parsePrototype(string name, Type *type);
-	FunctionAST *parseFunction(string name, Type *type);
-	// 语句块
+	FunctionAST* parseFunction(string name, Type *type);
+	FunctionAST *parseTopLevelExpr();
 	Stmt* parseStmt();
 	Stmt* parseBlock();
 	Stmt* parseDeclaration();
-	// 控制流
 	Stmt* parseIfElse();
 	Stmt* parseWhileDo();
 	Stmt* parseDoWhile();
@@ -88,7 +87,6 @@ protected:
 	Stmt* parseContinue();
 	Stmt* parseThrow();
 	Stmt* parseTryCatch();
-	// 表达式
 	ExprAST* parseExpression();
 	ExprAST* parseBinaryExpr(int ExprPrec, ExprAST *lhs);
 	ExprAST* parsePrimary();
@@ -106,7 +104,7 @@ public:
 		precedence.clear();
 		delete lexer;
 	}
-	ASTNode* parse(char *filename){
+	AST* parse(char *filename){
 		lexer->open(filename);
 		s = lexer->scan();// 预读一个词法单元，以便启动语法分析
 		parseBlocks();

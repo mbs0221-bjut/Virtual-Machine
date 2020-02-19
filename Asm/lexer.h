@@ -31,12 +31,12 @@ struct Token{
 };
 
 struct Word :Token{
-	string word;
-	Word(int tag, string word) :Token(tag), word(word) {  }
+	string str;
+	Word(int tag, string str) :Token(tag), str(str) {  }
 	virtual string place(){
-		ostringstream s;
-		s << word;
-		return s.str();
+		ostringstream os;
+		os << str;
+		return os.str();
 	}
 	virtual string code(){
 		return "";
@@ -49,7 +49,7 @@ struct Type :Word{
 	Type(int kind, string word, int width) :Word(kind, word), width(width){  }
 	virtual string place(){
 		ostringstream s;
-		s << word << ":" << width;
+		s << str << ":" << width;
 		return s.str();
 	}
 	virtual string code(){

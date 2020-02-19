@@ -137,8 +137,8 @@ private:
 		match(':');
 		Code *body = match_codes();
 		match(ENDP);
-		Proc *proc = new Proc(lexer->line, w->word, body);
-		funcs[w->word] = proc;
+		Proc *proc = new Proc(lexer->line, w->str, body);
+		funcs[w->str] = proc;
 		return proc;
 	}
 	Code* match_codes() {
@@ -179,13 +179,13 @@ private:
 	Code* match_label() {
 		Word *w = match_word();
 		match(':');
-		return add_label(w->word);
+		return add_label(w->str);
 	}
 	Code* match_call(){
 		match(CALL);
 		Word *w = match_word();
-		if (funcs.find(w->word) != funcs.end()){
-			Proc *func = funcs[w->word];
+		if (funcs.find(w->str) != funcs.end()){
+			Proc *func = funcs[w->str];
 			match(ID);
 			return new Call(lexer->line, func);
 		}
@@ -231,7 +231,7 @@ private:
 	Code* match_jmp(){
 		match(JMP);
 		Word *w = match_word();
-		Label *label = (Label*)add_label(w->word);
+		Label *label = (Label*)add_label(w->str);
 		match(ID);
 		return new Jmp(lexer->line, label);
 	}
